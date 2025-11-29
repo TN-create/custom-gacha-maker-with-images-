@@ -7,6 +7,37 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <!-- Post-roll cinematic cutscene -->
+  <div id="postRollCutscene" class="cutscene post-roll hidden" aria-hidden="true">
+    <div class="cs-layer backdrop"></div>
+    <div class="cs-stage pr-stage">
+      <div class="cs-panel pr-panel pr-step-1 active">
+        <h2 class="cs-title accent">The Result Emerges...</h2>
+        <p class="cs-sub" id="prSummary"></p>
+      </div>
+      <div class="cs-panel pr-panel pr-step-2">
+        <h2 class="cs-title">Inventory Grows</h2>
+        <p class="cs-sub">Duplicates fuse into power.</p>
+      </div>
+      <div class="cs-panel pr-panel pr-step-3 final">
+        <h2 class="cs-title accent">Witness Each Pull</h2>
+        <p class="cs-sub">Scroll through what fate delivered.</p>
+      </div>
+      <button id="prSkip" class="cs-skip" type="button" aria-label="Skip">Skip ✕</button>
+    </div>
+  </div>
+
+  <!-- Roll cinematic overlay -->
+  <div id="rollCinematic" class="roll-cine hidden" aria-hidden="true">
+    <div class="rc-stage">
+      <div class="rc-back"></div>
+      <div class="rc-portal"></div>
+      <div id="rcParticles" class="rc-particles"></div>
+      <div id="rcCards" class="rc-cards"></div>
+      <button id="rcSkip" type="button" class="btn rc-skip" aria-label="Skip">Skip ✕</button>
+    </div>
+  </div>
+
   <main class="container">
     <header class="app-header">
       <h1>Custom Gacha Maker</h1>

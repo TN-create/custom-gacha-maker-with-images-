@@ -49,8 +49,16 @@
     prevBtn: document.getElementById("prevBtn"),
     nextBtn: document.getElementById("nextBtn"),
     burst: document.getElementById("burst"),
-    inventoryGrid: document.getElementById("inventoryGrid"),
     inventoryResults: document.getElementById("inventoryResults"),
+    // Removed: cutscene refs
+    postRollCutscene: document.getElementById("postRollCutscene"),
+    prSkip: document.getElementById("prSkip"),
+    prSummary: document.getElementById("prSummary"),
+    // Cinematic refs
+    rollCinematic: document.getElementById("rollCinematic"),
+    rcParticles: document.getElementById("rcParticles"),
+    rcCards: document.getElementById("rcCards"),
+    rcSkip: document.getElementById("rcSkip"),
   };
 
   // Helpers
@@ -260,6 +268,83 @@
 
     refs.skipBtn.addEventListener("click", onSkip, { once: true });
     return p.then(finish);
+  };
+
+  // Cinematic roll animation
+  const playRollCinematic = (items) => {
+    if (!refs.rollCinematic) return Promise.resolve();
+    return new Promise(resolve => {
+      let skipped = false;
+      refs.rollCinematic.classList.remove("hidden");
+      refs.rollCinematic.setAttribute("aria-hidden","false");
+      refs.rcParticles.innerHTML = "";
+      refs.rcCards.innerHTML = "";
+
+      const cleanup = () => {
+        refs.rcSkip.removeEventListener("click", onSkip);
+        refs.rollCinematic.classList.add("hidden");
+        refs.rollCinematic.setAttribute("aria-hidden","true");
+        refs.rcParticles.innerHTML = "";
+        refs.rcCards.innerHTML = "";
+        resolve();
+      };
+      const onSkip = () => { skipped = true; cleanup(); };
+      refs.rcSkip.addEventListener("click", onSkip, { once:true });
+
+      // Spawn swirling icon particles
+      const spawnParticles = (count = 36) => {
+        for (let i=0;i<count;i++){
+          const p = document.createElement("i");
+          p.className="rc-particle";
+          p.style.backgroundImage = Math.random()<0.55 ? "var(--icon-star)" : "var(--icon-diamond)";
+          const ang = Math.random()*Math.PI*2;
+          const dist = 150 + Math.random()*260;
+          p.style.setProperty("--dx", Math.cos(ang)*dist + "px");
+          p.style.setProperty("--dy", Math.sin(ang)*dist + "px");
+          p.style.animationDelay = (Math.random()*0.8).toFixed(2)+"s";
+          p.style.animationDuration = (2.6+Math.random()*1.4).toFixed(2)+"s";
+          refs.rcParticles.appendChild(p);
+          p.addEventListener("animationend", ()=> p.remove());
+        }
+      };
+      spawnParticles();
+
+      let idx = 0;
+      const interval = 520;
+
+      const nextCard = () => {
+        if (skipped) return;
+        if (idx >= items.length) {
+          setTimeout(()=> { if (!skipped) cleanup(); }, 700);
+          return;
+        }
+        const { group, img } = items[idx];
+        const card = document.createElement("div");
+        card.className = "rc-card";
+        card.style.zIndex = 5 + idx;
+        card.innerHTML = `
+          <img src="${img.url}" alt="${(img.title||img.name).replace(/"/g,"&quot;")}">
+          <div class="rc-title">${group.name} • ${(img.title||img.name)}</div>
+        `;
+        refs.rcCards.appendChild(card);
+
+        // Schedule flip and settle
+        setTimeout(()=> {
+          if (skipped) return;
+          card.classList.add("reveal");
+          // Minor particle burst per card
+          spawnParticles(8);
+          setTimeout(()=> {
+            if (skipped) return;
+            card.classList.add("final");
+          },600);
+        },300);
+
+        idx++;
+        setTimeout(nextCard, interval);
+      };
+      nextCard();
+    });
   };
 
   // Modal: neon star burst emitting from image edges
@@ -496,6 +581,7 @@
     showResults(items);
     await addToInventory(items);
     renderInventory();
+    await playRollCinematic(items);
     openModal(items, 0);
   };
 
@@ -515,6 +601,7 @@
     showResults(results);
     await addToInventory(results);
     renderInventory();
+    await playRollCinematic(results);
     openModal(results, 0);
   };
 
