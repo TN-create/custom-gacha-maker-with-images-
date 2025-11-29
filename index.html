@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Custom Gacha Maker</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="app-header">
+      <h1>Custom Gacha Maker</h1>
+    </header>
+
+    <section class="create-group card">
+      <h2>Create Group</h2>
+      <form id="createGroupForm" class="row gap">
+        <label class="field">
+          <span>Group name</span>
+          <input id="groupName" type="text" placeholder="e.g., Dragons" required />
+        </label>
+        <label class="field">
+          <span>Rarity (%)</span>
+          <input id="groupRarity" type="number" min="0" step="0.01" placeholder="e.g., 5" required />
+        </label>
+        <button id="addGroupBtn" type="submit" class="btn primary">Add group</button>
+      </form>
+      <p class="hint">Name and rarity are required. Rarity is used as weight (percent does not need to sum to 100).</p>
+    </section>
+
+    <section class="groups card">
+      <div class="row between">
+        <h2>Groups</h2>
+        <small class="muted">Scroll to view/edit groups</small>
+      </div>
+      <div id="groupsList" class="scroll-list"></div>
+    </section>
+
+    <section class="roll card">
+      <h2>Roll</h2>
+      <div class="row gap">
+        <button id="rollOneBtn" class="btn">Roll x1</button>
+        <button id="rollTenBtn" class="btn">Roll x10</button>
+      </div>
+      <p class="hint">A group is chosen by rarity first, then a random image from that group.</p>
+      <div id="results" class="results"></div>
+    </section>
+  </main>
+
+  <!-- Roll animation overlay -->
+  <div id="overlay" class="overlay hidden" aria-hidden="true">
+    <div class="fx">
+      <div id="particles" class="particles" aria-hidden="true"></div>
+      <div class="center">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="tip">Rolling...</div>
+      </div>
+      <button id="skipBtn" class="btn skip" type="button">Skip</button>
+    </div>
+  </div>
+
+  <!-- Result viewer modal -->
+  <div id="resultModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-dialog">
+      <button id="modalClose" class="icon-btn close" type="button" aria-label="Close">×</button>
+      <button id="prevBtn" class="nav prev" type="button" aria-label="Previous">‹</button>
+      <button id="nextBtn" class="nav next" type="button" aria-label="Next">›</button>
+      <div class="viewer">
+        <div class="canvas">
+          <img id="modalImage" alt="" />
+          <div id="burst" class="burst" aria-hidden="true"></div>
+        </div>
+        <div class="meta">
+          <div id="modalTitle" class="title"></div>
+          <div class="row between">
+            <div id="modalGroup" class="muted"></div>
+            <div id="modalIndex" class="muted"></div>
+          </div>
+        </div>
+        <div id="modalThumbs" class="thumbs-strip"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
