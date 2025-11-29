@@ -22,7 +22,8 @@
       index: 0,
       open: false,
       dir: "next", // track last navigation direction
-    }
+    },
+    inventory: new Map(), // key: imageId -> { id, title, groupName, url, count }
   };
 
   const refs = {
@@ -48,6 +49,7 @@
     prevBtn: document.getElementById("prevBtn"),
     nextBtn: document.getElementById("nextBtn"),
     burst: document.getElementById("burst"),
+    inventoryGrid: document.getElementById("inventoryGrid"),
   };
 
   // Helpers
@@ -425,6 +427,61 @@
     if (e.target === refs.modal) closeModal();
   });
 
+  // Clone an image's blob URL into a new independent blob URL
+  const cloneImageUrl = async (srcUrl) => {
+    try {
+      const res = await fetch(srcUrl);
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    } catch {
+      return srcUrl; // fallback to original if fetch fails
+    }
+  };
+
+  // Inventory aggregation
+  const addToInventory = async (items) => {
+    for (const { group, img } of items) {
+      const key = img.id;
+      const existing = state.inventory.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        // Clone the URL so inventory persists even if the original group/image is deleted
+        const clonedUrl = await cloneImageUrl(img.url);
+        state.inventory.set(key, {
+          id: key,
+          title: img.title || fileTitle(img.name),
+          groupName: group.name,
+          url: clonedUrl,
+          count: 1
+        });
+      }
+    }
+  };
+
+  const renderInventory = () => {
+    if (!refs.inventoryGrid) return;
+    refs.inventoryGrid.innerHTML = "";
+    if (state.inventory.size === 0) {
+      refs.inventoryGrid.append(
+        el("div", { class: "muted" }, "No items yet. Roll to fill your inventory.")
+      );
+      return;
+    }
+    const cards = [];
+    for (const it of state.inventory.values()) {
+      cards.push(
+        el("div", { class: "inv-card" },
+          el("img", { src: it.url, alt: it.title }),
+          el("div", { class: "count-badge" }, `x${it.count}`),
+          el("div", { class: "meta" }, `${it.groupName} • ${it.title}`)
+        )
+      );
+    }
+    const grid = el("div", { class: "inv-grid" }, cards);
+    refs.inventoryGrid.append(grid);
+  };
+
   const rollOnce = async () => {
     const group = pickGroupByRarity();
     if (!group) {
@@ -435,6 +492,8 @@
     await playRollAnimation(1400);
     const items = [{ group, img }];
     showResults(items);
+    await addToInventory(items);
+    renderInventory();
     openModal(items, 0);
   };
 
@@ -452,6 +511,8 @@
     }
     await playRollAnimation(1700);
     showResults(results);
+    await addToInventory(results);
+    renderInventory();
     openModal(results, 0);
   };
 
@@ -484,17 +545,6 @@
         return card;
       }));
       refs.results.append(grid);
-    }
-  };
-
-  // Clone an image's blob URL into a new independent blob URL
-  const cloneImageUrl = async (srcUrl) => {
-    try {
-      const res = await fetch(srcUrl);
-      const blob = await res.blob();
-      return URL.createObjectURL(blob);
-    } catch {
-      return srcUrl; // fallback to original if fetch fails
     }
   };
 
@@ -551,4 +601,5 @@
 
   // Initial render
   render();
+  renderInventory();
 })();
