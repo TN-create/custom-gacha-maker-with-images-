@@ -10,6 +10,7 @@
   --icon-star: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="%23ffffff" d="M32 4l7.9 16 17.7 2.6-12.8 12.5 3 17.5L32 44.8 16.2 52.6l3-17.5L6.4 22.6 24 20z"/></svg>');
   --icon-diamond: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="%2390e0ef" d="M32 4l28 28-28 28L4 32z"/></svg>');
   --title-gap: 12px; /* equal space from image to title block */
+  --badge-grad: linear-gradient(135deg, rgba(95,124,255,.95), rgba(160,185,255,.85));
 }
 
 * { box-sizing: border-box; }
@@ -534,45 +535,66 @@ html, body {
   }
 }
 
-/* Inventory */
-.inventory .inv-grid {
+/* REMOVE old inventory card overrides */
+/* (Result-card styling already exists and will be reused) */
+
+/* Delete previous inventory styles:
+.inventory .inv-grid { ... }
+.inventory .result-card { ... }
+.inventory .result-card .count-badge { ... }
+@media (max-width: 640px) { .inventory .inv-grid { ... } }
+*/
+
+/* No new styles needed; inventory now uses .results + .grid like rolls */
+
+/* Inventory scroll frame */
+.inventory .inv-scroll {
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 6px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
-}
-.inv-card {
-  position: relative;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: #141729;
-}
-.inv-card img {
-  width: 100%;
-  height: 110px;
-  object-fit: cover;
-  display: block;
-}
-.inv-card .meta {
-  padding: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.inv-card .count-badge {
-  position: absolute;
-  top: 8px; right: 8px;
-  background: rgba(20,20,30,.7);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.35);
 }
 
-/* Mobile: inventory grid tighter */
-@media (max-width: 640px) {
-  .inventory .inv-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  }
+/* Fancy count badge (separate display) */
+.result-card .count-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--badge-grad);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .5px;
+  padding: 4px 6px 5px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.15), 0 4px 14px rgba(0,0,0,.45);
+  animation: badgePulse 2.6s ease-in-out infinite;
+}
+@keyframes badgePulse {
+  0%,100% { filter: drop-shadow(0 0 4px rgba(95,124,255,.55)); }
+  50% { filter: drop-shadow(0 0 10px rgba(160,185,255,.85)); }
+}
+
+/* Inventory cards need relative for badge */
+.inventory .result-card { position: relative; }
+
+/* Hide navigation when in preview (single inventory view) */
+.modal.preview .nav.inside { display: none; }
+
+/* Adjust scrollbars for inventory (optional hidden look) */
+.inventory .inv-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.inventory .inv-scroll::-webkit-scrollbar-track {
+  background: #121528;
+}
+.inventory .inv-scroll::-webkit-scrollbar-thumb {
+  background: #2a3048;
+  border-radius: 6px;
+}
+@media (max-width:640px){
+  .inventory .inv-scroll { max-height: 300px; }
+  .result-card .count-badge { font-size: 12px; }
 }

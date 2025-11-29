@@ -23,7 +23,7 @@
       open: false,
       dir: "next", // track last navigation direction
     },
-    inventory: new Map(), // key: imageId -> { id, title, groupName, url, count }
+    inventory: new Map(),
   };
 
   const refs = {
@@ -50,6 +50,7 @@
     nextBtn: document.getElementById("nextBtn"),
     burst: document.getElementById("burst"),
     inventoryGrid: document.getElementById("inventoryGrid"),
+    inventoryResults: document.getElementById("inventoryResults"),
   };
 
   // Helpers
@@ -329,13 +330,15 @@
   };
 
   // Modal viewer
-  const openModal = (items, startIndex = 0) => {
+  const openModal = (items, startIndex = 0, { preview = false } = {}) => {
     state.modal.items = items.slice();
     state.modal.index = Math.min(Math.max(0, startIndex), items.length - 1);
     state.modal.open = true;
+    state.modal.dir = "next";
+    refs.modal.classList.toggle("preview", preview);
     refs.modal.classList.remove("hidden");
     refs.modal.setAttribute("aria-hidden", "false");
-    updateModal();
+    updateModal(preview);
     // Keyboard nav
     document.addEventListener("keydown", onKeyNav);
   };
@@ -346,6 +349,7 @@
     refs.modal.classList.add("hidden");
     refs.modal.setAttribute("aria-hidden", "true");
     refs.burst.innerHTML = "";
+    refs.modal.classList.remove("preview");
     document.removeEventListener("keydown", onKeyNav);
   };
 
@@ -356,44 +360,33 @@
     else if (e.key === "ArrowLeft") { prevModal(); }
   };
 
-  const updateModal = () => {
+  const updateModal = (preview = refs.modal.classList.contains("preview")) => {
     const items = state.modal.items;
     const i = state.modal.index;
     if (!items.length) return;
     const { group, img } = items[i];
-
-    // Prepare fade-out of current image if already visible
     const wasSrc = refs.modalImage.src;
     const willChange = !!wasSrc && wasSrc !== img.url;
     if (willChange) {
-      refs.modalImage.classList.remove("slide-next", "slide-prev", "fade-in");
+      refs.modalImage.classList.remove("slide-next","slide-prev","fade-in");
       refs.modalImage.classList.add("fade-out");
     }
-
     const applyNewImage = () => {
-      // Set content
       refs.modalImage.src = img.url;
       refs.modalImage.alt = img.title || img.name;
       refs.modalTitle.textContent = img.title || fileTitle(img.name);
       refs.modalGroup.textContent = group.name;
       refs.modalIndex.textContent = `${i + 1} / ${items.length}`;
-
-      // Animate new image in (direction + fade-in)
-      refs.modalImage.classList.remove("slide-next", "slide-prev", "fade-out", "fade-in");
+      refs.modalImage.classList.remove("slide-next","slide-prev","fade-out","fade-in");
       const dirClass = state.modal.dir === "prev" ? "slide-prev" : "slide-next";
-      void refs.modalImage.offsetWidth; // reflow
+      void refs.modalImage.offsetWidth;
       refs.modalImage.classList.add("fade-in", dirClass);
       refs.modalImage.addEventListener("animationend", () => {
         refs.modalImage.classList.remove("fade-in", dirClass);
       }, { once: true });
-
-      // Hide future entries
       refs.modalThumbs.innerHTML = "";
-
-      // Emit stars on reveal from image edges
-      burstStars(20);
+      if (!preview) burstStars(20); // suppress effects for inventory preview
     };
-
     if (willChange) {
       refs.modalImage.addEventListener("animationend", applyNewImage, { once: true });
     } else {
@@ -460,26 +453,35 @@
   };
 
   const renderInventory = () => {
-    if (!refs.inventoryGrid) return;
-    refs.inventoryGrid.innerHTML = "";
-    if (state.inventory.size === 0) {
-      refs.inventoryGrid.append(
-        el("div", { class: "muted" }, "No items yet. Roll to fill your inventory.")
+    if (!refs.inventoryResults) return;
+    refs.inventoryResults.innerHTML = "";
+    const list = Array.from(state.inventory.values());
+    if (!list.length) {
+      refs.inventoryResults.append(
+        el("div", { class: "card" }, el("div", { class: "muted" }, "No items yet. Roll to fill your inventory."))
       );
       return;
     }
-    const cards = [];
-    for (const it of state.inventory.values()) {
-      cards.push(
-        el("div", { class: "inv-card" },
-          el("img", { src: it.url, alt: it.title }),
-          el("div", { class: "count-badge" }, `x${it.count}`),
-          el("div", { class: "meta" }, `${it.groupName} • ${it.title}`)
+    let content;
+    if (list.length === 1) {
+      const it = list[0];
+      content = el("div", { class: "result-card", onclick: () => openModal([{ group:{name: it.groupName}, img:{ url: it.url, name: it.title, title: it.title, id: it.id } }], 0, { preview: true }) },
+        el("img", { src: it.url, alt: it.title }),
+        el("div", { class: "count-badge" }, `${it.count}x`),
+        el("div", { class: "meta" }, `${it.groupName} • ${it.title}`)
+      );
+    } else {
+      content = el("div", { class: "grid" },
+        list.map(it =>
+          el("div", { class: "result-card", onclick: () => openModal([{ group:{name: it.groupName}, img:{ url: it.url, name: it.title, title: it.title, id: it.id } }], 0, { preview: true }) },
+            el("img", { src: it.url, alt: it.title }),
+            el("div", { class: "count-badge" }, `${it.count}x`),
+            el("div", { class: "meta" }, `${it.groupName} • ${it.title}`)
+          )
         )
       );
     }
-    const grid = el("div", { class: "inv-grid" }, cards);
-    refs.inventoryGrid.append(grid);
+    refs.inventoryResults.append(content);
   };
 
   const rollOnce = async () => {
