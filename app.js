@@ -303,6 +303,8 @@
           p.style.setProperty("--dy", Math.sin(ang)*dist + "px");
           p.style.animationDelay = (Math.random()*0.8).toFixed(2)+"s";
           p.style.animationDuration = (2.6+Math.random()*1.4).toFixed(2)+"s";
+          p.style.left = "50%";              // center emission
+          p.style.top = "50%";
           refs.rcParticles.appendChild(p);
           p.addEventListener("animationend", ()=> p.remove());
         }

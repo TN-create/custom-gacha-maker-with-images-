@@ -862,3 +862,39 @@ html, body {
   .rc-portal { width:320px; height:320px; }
   .rc-skip { top:12px; right:14px; }
 }
+
+/* Mobile modal viewer: allow taller images & scrolling */
+@media (max-width: 640px) {
+  .modal-dialog {
+    max-height: 96vh;
+  }
+  .viewer {
+    overflow-y: auto; /* allow scroll if tall image exceeds viewport */
+  }
+  .canvas {
+    height: auto;
+    min-height: clamp(260px, 75vh, 760px); /* expand vertical room for tall images */
+    max-height: 80vh;
+  }
+}
+
+/* Inventory count badge redesign (top-left pill, non-blocking) */
+.inventory .result-card {
+  position: relative; /* ensure badge positions correctly */
+}
+.inventory .result-card .count-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  bottom: auto;
+  right: auto;
+  padding: 4px 10px 5px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  line-height: 1;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(95,124,255,.92), rgba(160,185,255,.75));
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.25), 0 4px 14px -4px rgba(0,0,0,.6), 0 0 12px rgba(120,150,255,.55);
+ 
