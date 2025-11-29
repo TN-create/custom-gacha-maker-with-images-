@@ -63,11 +63,12 @@
   <div id="resultModal" class="modal hidden" aria-hidden="true">
     <div class="modal-dialog">
       <button id="modalClose" class="icon-btn close" type="button" aria-label="Close">×</button>
-      <button id="prevBtn" class="nav prev" type="button" aria-label="Previous">‹</button>
-      <button id="nextBtn" class="nav next" type="button" aria-label="Next">›</button>
       <div class="viewer">
         <div class="canvas">
+          <!-- Move arrows into canvas -->
+          <button id="prevBtn" class="nav inside prev" type="button" aria-label="Previous">‹</button>
           <img id="modalImage" alt="" />
+          <button id="nextBtn" class="nav inside next" type="button" aria-label="Next">›</button>
           <div id="burst" class="burst" aria-hidden="true"></div>
         </div>
         <div class="meta">

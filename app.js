@@ -21,6 +21,7 @@
       items: [],
       index: 0,
       open: false,
+      dir: "next", // track last navigation direction
     }
   };
 
@@ -32,10 +33,11 @@
     rollOneBtn: document.getElementById("rollOneBtn"),
     rollTenBtn: document.getElementById("rollTenBtn"),
     results: document.getElementById("results"),
+    // Overlay refs (fix first-roll popup bug)
     overlay: document.getElementById("overlay"),
     particles: document.getElementById("particles"),
     skipBtn: document.getElementById("skipBtn"),
-    // Modal
+    // Modal refs...
     modal: document.getElementById("resultModal"),
     modalImage: document.getElementById("modalImage"),
     modalTitle: document.getElementById("modalTitle"),
@@ -99,30 +101,48 @@
       accept: "image/*",
       multiple: "true",
       style: "display:none",
-      onchange: (e) => handleFilesSelected(group.id, e.target.files, thumbs),
+      onchange: (e) => handleFilesSelected(group.id, e.target.files),
     });
-    const uploadBtn = el("button", {
+
+    const addBtn = el("button", {
       class: "btn small",
       type: "button",
       onclick: () => uploadInput.click()
     }, "Add images");
 
+    const copyBtn = el("button", {
+      class: "btn small",
+      type: "button",
+      onclick: () => duplicateGroup(group)
+    }, "Copy");
+
     const deleteBtn = el("button", {
       class: "btn small danger",
       type: "button",
-      onclick: () => {
-        if (!confirm(`Delete group "${group.name}" and its ${group.images.length} image(s)?`)) return;
-        revokeImages(group.images);
-        state.groups = state.groups.filter(g => g.id !== group.id);
+      onclick: (e) => {
+        // Get the group id from the nearest card to avoid stale closures
+        const card = e.currentTarget.closest(".group");
+        const idStr = card?.dataset?.id;
+        const id = Number(idStr);
+        const idx = state.groups.findIndex(g => g.id === id);
+        if (idx === -1) return;
+
+        const g = state.groups[idx];
+        if (!confirm(`Delete group "${g.name}" and its ${g.images.length} image(s)?`)) return;
+
+        // Revoke blob URLs, remove from state, and re-render
+        revokeImages(g.images);
+        state.groups.splice(idx, 1);
         render();
       }
     }, "Delete");
 
+    const actions = el("div", { class: "group-actions" }, addBtn, copyBtn, deleteBtn);
+
     const header = el("div", { class: "group-header" },
       nameInput,
       el("div", { class: "rarity-wrap" }, rarityInput, el("span", {}, "%")),
-      uploadBtn,
-      deleteBtn
+      actions
     );
 
     const thumbs = el("div", { class: "thumb-grid" }, group.images.map(img => renderThumb(group, img)));
@@ -182,7 +202,7 @@
     render();
   };
 
-  // Weighted random selection by rarity among groups with images
+  // Weighted random selection of groups with images
   const pickGroupByRarity = () => {
     const pool = state.groups.filter(g => g.images.length > 0 && g.rarity > 0);
     const total = pool.reduce((a, g) => a + g.rarity, 0);
@@ -239,19 +259,68 @@
     return p.then(finish);
   };
 
-  // Modal: star burst particles when image shows
-  const burstStars = (count = 14) => {
+  // Modal: neon star burst emitting from image edges
+  const burstStars = (count = 16) => {
     refs.burst.innerHTML = "";
-    for (let i = 0; i < count; i++) {
+    const imgEl = refs.modalImage;
+    const canvasEl = refs.modalImage.closest(".canvas");
+    if (!imgEl || !canvasEl) return;
+
+    // Get bounding boxes relative to canvas to compute edges
+    const canvasRect = canvasEl.getBoundingClientRect();
+    const imgRect = imgEl.getBoundingClientRect();
+
+    // Calculate relative positions inside canvas
+    const left = imgRect.left - canvasRect.left;
+    const right = imgRect.right - canvasRect.left;
+    const top = imgRect.top - canvasRect.top;
+    const bottom = imgRect.bottom - canvasRect.top;
+
+    // Edge samplers: top, bottom, left, right
+    const edges = [
+      { edge: "top", x0: left, x1: right, y: top, nx: 0, ny: -1 },
+      { edge: "bottom", x0: left, x1: right, y: bottom, nx: 0, ny: 1 },
+      { edge: "left", y0: top, y1: bottom, x: left, nx: -1, ny: 0 },
+      { edge: "right", y0: top, y1: bottom, x: right, nx: 1, ny: 0 },
+    ];
+
+    const particles = Math.max(8, count);
+    for (let i = 0; i < particles; i++) {
+      const e = edges[i % edges.length];
+      let px, py;
+
+      if (e.edge === "top" || e.edge === "bottom") {
+        const t = Math.random();
+        px = e.x0 + t * (e.x1 - e.x0);
+        py = e.y;
+      } else {
+        const t = Math.random();
+        px = e.x;
+        py = e.y0 + t * (e.y1 - e.y0);
+      }
+
+      // Randomize direction slightly outward from the edge normal
+      const spread = (Math.random() - 0.5) * 0.8; // small angle variation
+      const dirX = e.nx + (e.ny ? spread : 0);
+      const dirY = e.ny + (e.nx ? spread : 0);
+
+      const dist = 80 + Math.random() * 140; // travel distance in px
+      const dx = dirX * dist;
+      const dy = dirY * dist;
+
       const p = document.createElement("i");
       p.className = "particle star";
-      const ang = Math.random() * Math.PI * 2;
-      const dist = 60 + Math.random() * 120;
-      const dx = Math.cos(ang) * dist;
-      const dy = Math.sin(ang) * dist;
-      p.style.setProperty("--dx", dx + "px");
-      p.style.setProperty("--dy", dy + "px");
-      p.style.setProperty("--rot", (Math.random()*360).toFixed(0) + "deg");
+      // Position the particle origin inside the canvas coordinate system
+      // burst container is positioned absolutely within canvas; use CSS vars with pixel offsets
+      const centerX = px;
+      const centerY = py;
+      // Translate CSS vars relative to center of burst container
+      // We anchor burst at center via CSS translate(-50%,-50%), so convert to dx/dy from center
+      const canvasCenterX = canvasRect.width / 2;
+      const canvasCenterY = canvasRect.height / 2;
+      p.style.setProperty("--dx", (centerX - canvasCenterX + dx) + "px");
+      p.style.setProperty("--dy", (centerY - canvasCenterY + dy) + "px");
+      p.style.setProperty("--rot", (Math.random() * 360).toFixed(0) + "deg");
       refs.burst.appendChild(p);
       p.addEventListener("animationend", () => p.remove());
     }
@@ -290,21 +359,51 @@
     const i = state.modal.index;
     if (!items.length) return;
     const { group, img } = items[i];
-    refs.modalImage.src = img.url;
-    refs.modalImage.alt = img.title || img.name;
-    refs.modalTitle.textContent = img.title || fileTitle(img.name);
-    refs.modalGroup.textContent = group.name;
-    refs.modalIndex.textContent = `${i + 1} / ${items.length}`;
-    // Do not show future entries; hide thumbs (no population)
-    refs.modalThumbs.innerHTML = "";
-    // Emit stars on reveal
-    burstStars(16);
+
+    // Prepare fade-out of current image if already visible
+    const wasSrc = refs.modalImage.src;
+    const willChange = !!wasSrc && wasSrc !== img.url;
+    if (willChange) {
+      refs.modalImage.classList.remove("slide-next", "slide-prev", "fade-in");
+      refs.modalImage.classList.add("fade-out");
+    }
+
+    const applyNewImage = () => {
+      // Set content
+      refs.modalImage.src = img.url;
+      refs.modalImage.alt = img.title || img.name;
+      refs.modalTitle.textContent = img.title || fileTitle(img.name);
+      refs.modalGroup.textContent = group.name;
+      refs.modalIndex.textContent = `${i + 1} / ${items.length}`;
+
+      // Animate new image in (direction + fade-in)
+      refs.modalImage.classList.remove("slide-next", "slide-prev", "fade-out", "fade-in");
+      const dirClass = state.modal.dir === "prev" ? "slide-prev" : "slide-next";
+      void refs.modalImage.offsetWidth; // reflow
+      refs.modalImage.classList.add("fade-in", dirClass);
+      refs.modalImage.addEventListener("animationend", () => {
+        refs.modalImage.classList.remove("fade-in", dirClass);
+      }, { once: true });
+
+      // Hide future entries
+      refs.modalThumbs.innerHTML = "";
+
+      // Emit stars on reveal from image edges
+      burstStars(20);
+    };
+
+    if (willChange) {
+      refs.modalImage.addEventListener("animationend", applyNewImage, { once: true });
+    } else {
+      applyNewImage();
+    }
   };
 
   const nextModal = () => {
     if (!state.modal.open) return;
     const n = state.modal.index + 1;
     if (n < state.modal.items.length) {
+      state.modal.dir = "next";
       state.modal.index = n;
       updateModal();
     }
@@ -313,6 +412,7 @@
     if (!state.modal.open) return;
     const n = state.modal.index - 1;
     if (n >= 0) {
+      state.modal.dir = "prev";
       state.modal.index = n;
       updateModal();
     }
@@ -363,27 +463,62 @@
     );
   };
 
+  // Enhance results rendering: clicking a card opens modal at that index
   const showResults = (items) => {
     refs.results.innerHTML = "";
     if (items.length === 1) {
       const { group, img } = items[0];
-      refs.results.append(
-        el("div", { class: "result-card" },
+      const card = el("div", { class: "result-card" },
+        el("img", { src: img.url, alt: img.title || img.name }),
+        el("div", { class: "meta" }, `${group.name} • ${img.title || fileTitle(img.name)}`)
+      );
+      card.addEventListener("click", () => openModal(items, 0));
+      refs.results.append(card);
+    } else {
+      const grid = el("div", { class: "grid" }, items.map(({ group, img }, idx) => {
+        const card = el("div", { class: "result-card" },
           el("img", { src: img.url, alt: img.title || img.name }),
           el("div", { class: "meta" }, `${group.name} • ${img.title || fileTitle(img.name)}`)
-        )
-      );
-    } else {
-      const grid = el("div", { class: "grid" },
-        items.map(({ group, img }) =>
-          el("div", { class: "result-card" },
-            el("img", { src: img.url, alt: img.title || img.name }),
-            el("div", { class: "meta" }, `${group.name} • ${img.title || fileTitle(img.name)}`)
-          )
-        )
-      );
+        );
+        card.addEventListener("click", () => openModal(items, idx));
+        return card;
+      }));
       refs.results.append(grid);
     }
+  };
+
+  // Clone an image's blob URL into a new independent blob URL
+  const cloneImageUrl = async (srcUrl) => {
+    try {
+      const res = await fetch(srcUrl);
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    } catch {
+      return srcUrl; // fallback to original if fetch fails
+    }
+  };
+
+  // Duplicate a group's data including images (with new URLs)
+  const duplicateGroup = async (group) => {
+    const newImages = [];
+    for (const img of group.images) {
+      const newUrl = await cloneImageUrl(img.url);
+      newImages.push({
+        id: crypto.randomUUID(),
+        name: img.name,
+        title: img.title,
+        url: newUrl
+      });
+    }
+    const copy = {
+      id: state.nextId++,
+      name: `${group.name} (Copy)`,
+      rarity: group.rarity,
+      images: newImages
+    };
+    state.groups.push(copy);
+    render();
+    queueMicrotask(() => { refs.groupsList.scrollTop = refs.groupsList.scrollHeight; });
   };
 
   // Form events
