@@ -59,6 +59,10 @@
     rcParticles: document.getElementById("rcParticles"),
     rcCards: document.getElementById("rcCards"),
     rcSkip: document.getElementById("rcSkip"),
+    // Export/Import refs
+    exportBtn: document.getElementById("exportBtn"),
+    importBtn: document.getElementById("importBtn"),
+    importInput: document.getElementById("importInput"),
   };
 
   // Helpers
@@ -141,6 +145,8 @@
         const g = state.groups[idx];
         if (!confirm(`Delete group "${g.name}" and its ${g.images.length} image(s)?`)) return;
 
+        // Remove related inventory entries first
+        g.images.forEach(img => removeInventoryByImageId(img.id));
         // Revoke blob URLs, remove from state, and re-render
         revokeImages(g.images);
         state.groups.splice(idx, 1);
@@ -148,17 +154,36 @@
       }
     }, "Delete");
 
-    const actions = el("div", { class: "group-actions" }, addBtn, copyBtn, deleteBtn);
+    const dragUI = el("div", { class: "drag-hint" },
+      el("span", { class: "drag-handle", title: "Drag to reorder" }),
+      el("span", {}, "Drag to reorder")
+    );
 
     const header = el("div", { class: "group-header" },
       nameInput,
       el("div", { class: "rarity-wrap" }, rarityInput, el("span", {}, "%")),
-      actions
+      el("div", { class: "group-actions" }, dragUI, addBtn, copyBtn, deleteBtn)
     );
 
     const thumbs = el("div", { class: "thumb-grid" }, group.images.map(img => renderThumb(group, img)));
 
-    const groupCard = el("div", { class: "group", dataset: { id: group.id } },
+    const groupCard = el("div", {
+      class: "group",
+      dataset: { id: group.id },
+      tabindex: "0",
+      onkeydown: (e) => {
+        if (!e.altKey) return;
+        const idx = state.groups.findIndex(g => g.id === group.id);
+        if (idx === -1) return;
+        if (e.key === "ArrowUp" && idx > 0) {
+          moveGroupToIndex(group.id, idx - 1);
+          e.preventDefault();
+        } else if (e.key === "ArrowDown" && idx < state.groups.length - 1) {
+          moveGroupToIndex(group.id, idx + 1);
+          e.preventDefault();
+        }
+      }
+    },
       header,
       el("div", { class: "row between" },
         el("small", { class: "muted" }, `${group.images.length} image(s)`),
@@ -167,6 +192,10 @@
       thumbs
     );
 
+    // Enable both native DnD and pointer sorting
+    enableNativeDnD(groupCard);
+    enablePointerSort(groupCard);
+
     return groupCard;
   };
 
@@ -174,6 +203,8 @@
   const renderThumb = (group, img) => {
     const remove = () => {
       group.images = group.images.filter(i => i.id !== img.id);
+      // Also remove from inventory
+      removeInventoryByImageId(img.id);
       try { URL.revokeObjectURL(img.url); } catch {}
       render();
     };
@@ -186,6 +217,8 @@
       const newTitle = next.trim();
       if (!newTitle.length) return; // ignore empty
       img.title = newTitle;
+      // Reflect rename in inventory if present
+      updateInventoryTitle(img.id, newTitle);
       render();
     };
     return el("div", { class: "thumb", title: img.title || img.name, onclick: onThumbClick },
@@ -539,6 +572,20 @@
     }
   };
 
+  // Inventory sync helpers
+  const removeInventoryByImageId = (imgId) => {
+    if (state.inventory.delete(imgId)) {
+      renderInventory();
+    }
+  };
+  const updateInventoryTitle = (imgId, newTitle) => {
+    const it = state.inventory.get(imgId);
+    if (it) {
+      it.title = newTitle;
+      renderInventory();
+    }
+  };
+
   const renderInventory = () => {
     if (!refs.inventoryResults) return;
     refs.inventoryResults.innerHTML = "";
@@ -662,6 +709,121 @@
     queueMicrotask(() => { refs.groupsList.scrollTop = refs.groupsList.scrollHeight; });
   };
 
+  // Reorder helpers
+  const moveGroupToIndex = (id, newIdx) => {
+    const curIdx = state.groups.findIndex(g => g.id === id);
+    if (curIdx === -1 || newIdx === -1 || curIdx === newIdx) return;
+    const [item] = state.groups.splice(curIdx, 1);
+    state.groups.splice(newIdx, 0, item);
+    render();
+  };
+  const indexFromCard = (card) => Number(card?.dataset?.id) ? state.groups.findIndex(g => g.id === Number(card.dataset.id)) : -1;
+
+  // Pointer-driven sorting (mobile + desktop fallback)
+  const enablePointerSort = (card) => {
+    const handle = card.querySelector(".drag-handle");
+    if (!handle) return;
+
+    let draggingId = null;
+    let placeholder = null;
+    let startY = 0;
+
+    const listEl = refs.groupsList;
+
+    const onPointerMove = (e) => {
+      if (!draggingId) return;
+      const ptY = e.clientY;
+      // Find closest group under pointer
+      const cards = Array.from(listEl.children);
+      let targetIdx = -1;
+      for (let i = 0; i < cards.length; i++) {
+        const r = cards[i].getBoundingClientRect();
+        if (ptY >= r.top && ptY <= r.bottom) {
+          // Decide before/after by midline
+          targetIdx = ptY < (r.top + r.height / 2) ? i : i + 1;
+          break;
+        }
+      }
+      if (targetIdx === -1) {
+        // Outside: auto-scroll if near edges
+        const rect = listEl.getBoundingClientRect();
+        if (ptY < rect.top + 40) listEl.scrollTop -= 20;
+        else if (ptY > rect.bottom - 40) listEl.scrollTop += 20;
+        return;
+      }
+
+      // Create/update placeholder
+      if (!placeholder) {
+        placeholder = document.createElement("div");
+        placeholder.className = "group placeholder";
+        placeholder.style.height = card.getBoundingClientRect().height + "px";
+        listEl.insertBefore(placeholder, listEl.children[targetIdx] || null);
+      } else {
+        const currentIndex = Array.from(listEl.children).indexOf(placeholder);
+        if (currentIndex !== targetIdx) {
+          listEl.insertBefore(placeholder, listEl.children[targetIdx] || null);
+        }
+      }
+    };
+
+    const endDrag = () => {
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", endDrag);
+      if (draggingId && placeholder) {
+        const dropIdx = Array.from(listEl.children).indexOf(placeholder);
+        placeholder.remove();
+        placeholder = null;
+        // Translate DOM index to state index (only count .group cards)
+        const groupsDom = Array.from(listEl.children).filter(n => n.classList.contains("group"));
+        const dropGroupCard = groupsDom[dropIdx] || null;
+        const newStateIdx = dropGroupCard ? indexFromCard(dropGroupCard) : state.groups.length;
+        moveGroupToIndex(draggingId, newStateIdx);
+      }
+      draggingId = null;
+    };
+
+    handle.addEventListener("pointerdown", (e) => {
+      // Only left button / primary touch
+      if (e.button !== undefined && e.button !== 0) return;
+      draggingId = Number(card.dataset.id);
+      startY = e.clientY;
+      document.addEventListener("pointermove", onPointerMove);
+      document.addEventListener("pointerup", endDrag);
+      e.preventDefault();
+    });
+  };
+
+  // Improve DnD consistency for mouse (HTML5)
+  const enableNativeDnD = (card) => {
+    card.setAttribute("draggable", "true");
+    card.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(card.dataset.id));
+      try { e.dataTransfer.setDragImage(card, 10, 10); } catch {}
+      card.classList.add("placeholder");
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("placeholder");
+      Array.from(refs.groupsList.children).forEach(c => c.classList.remove("drag-over"));
+    });
+    card.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.currentTarget.classList.add("drag-over");
+    });
+    card.addEventListener("dragleave", (e) => {
+      e.currentTarget.classList.remove("drag-over");
+    });
+    card.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.currentTarget.classList.remove("drag-over");
+      const dragId = Number(e.dataTransfer.getData("text/plain"));
+      const dropIdx = indexFromCard(e.currentTarget);
+      if (dropIdx !== -1) {
+        moveGroupToIndex(dragId, dropIdx);
+      }
+    });
+  };
+
   // Form events
   refs.createForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -689,6 +851,215 @@
 
   refs.rollOneBtn.addEventListener("click", rollOnce);
   refs.rollTenBtn.addEventListener("click", rollTen);
+
+  // Busy overlay helpers
+  const busyEl = document.getElementById("busyOverlay");
+  const busyTextEl = document.getElementById("busyText");
+  const showBusy = (text = "Working...") => {
+    if (!busyEl) return;
+    busyTextEl && (busyTextEl.textContent = text);
+    busyEl.classList.remove("hidden");
+    busyEl.setAttribute("aria-hidden", "false");
+  };
+  const hideBusy = () => {
+    if (!busyEl) return;
+    busyEl.classList.add("hidden");
+    busyEl.setAttribute("aria-hidden", "true");
+  };
+
+  // Export/Import refs
+  const exportBtn = document.getElementById("exportBtn");
+  const importBtn = document.getElementById("importBtn");
+  const importInput = document.getElementById("importInput");
+
+  // Helpers for URL <-> dataURL
+  const urlToDataUrl = async (url) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result); // data URL
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return url; // fallback
+    }
+  };
+  const dataUrlToBlobUrl = async (dataUrl) => {
+    // Turn embedded data URL back into object URL (for img.src usage)
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    } catch {
+      // Fallback: decode by atob
+      const parts = dataUrl.split(",");
+      const mime = (parts[0].match(/data:(.*?);/) || [])[1] || "application/octet-stream";
+      const bstr = atob(parts[1] || "");
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      const blob = new Blob([u8arr], { type: mime });
+      return URL.createObjectURL(blob);
+    }
+  };
+
+  // Compact export (schema v2)
+  const exportData = async () => {
+    const defaultName = `gacha-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
+    const name = prompt("Enter export file name (without extension):", defaultName) || defaultName;
+
+    showBusy("Exporting...");
+    try {
+      const imagesDict = {}; // id -> { d, n, t }
+      const groupsOut = [];  // [{ id, n, r, i: [ids] }]
+
+      // Collect images across all groups (dedupe)
+      for (const g of state.groups) {
+        const imgIds = [];
+        for (const img of g.images) {
+          imgIds.push(img.id);
+          if (!imagesDict[img.id]) {
+            imagesDict[img.id] = {
+              d: await urlToDataUrl(img.url),      // data URL
+              n: img.name,
+              t: img.title || fileTitle(img.name),
+            };
+          }
+        }
+        groupsOut.push({ id: g.id, n: g.name, r: g.rarity, i: imgIds });
+      }
+
+      // Inventory as dictionary keyed by image id (compact keys)
+      const inventoryOut = {};
+      for (const it of state.inventory.values()) {
+        inventoryOut[it.id] = { c: it.count, t: it.title, g: it.groupName };
+      }
+
+      const payload = {
+        schema: "custom-gacha-maker/v2",
+        nextId: state.nextId,
+        images: imagesDict,
+        groups: groupsOut,
+        inventory: inventoryOut,
+      };
+
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } finally {
+      hideBusy();
+    }
+  };
+
+  // Import for schema v2 (fallback to v1 support)
+  const importData = async (file) => {
+    showBusy("Importing...");
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      const schema = payload?.schema;
+
+      if (!schema || (schema !== "custom-gacha-maker/v2" && schema !== "custom-gacha-maker/v1")) {
+        alert("Invalid or unsupported export file.");
+        return;
+      }
+
+      // Clean existing
+      state.groups.forEach(g => revokeImages(g.images));
+      state.groups = [];
+      state.inventory.clear();
+
+      if (schema === "custom-gacha-maker/v2") {
+        // Restore groups and images from compact dict
+        const imagesDict = payload.images || {};
+        const idToBlobUrl = {};
+
+        // Pre-materialize blob URLs (retain IDs)
+        for (const [imgId, meta] of Object.entries(imagesDict)) {
+          idToBlobUrl[imgId] = await dataUrlToBlobUrl(meta.d);
+        }
+
+        for (const g of payload.groups || []) {
+          const restoredImages = (g.i || []).map(id => ({
+            id,
+            name: imagesDict[id]?.n || "image",
+            title: imagesDict[id]?.t || imagesDict[id]?.n || "image",
+            url: idToBlobUrl[id]
+          }));
+          state.groups.push({ id: g.id, name: g.n, rarity: g.r, images: restoredImages });
+        }
+
+        state.nextId = Math.max(payload.nextId || 1, ...state.groups.map(g => g.id + 1), 1);
+
+        // Inventory
+        for (const [imgId, entry] of Object.entries(payload.inventory || {})) {
+          // Find group name by id
+          const owner = state.groups.find(g => g.images.some(img => img.id === imgId));
+          const srcImg = owner?.images.find(img => img.id === imgId);
+          if (!srcImg) continue;
+          const clonedUrl = await cloneImageUrl(srcImg.url);
+          state.inventory.set(imgId, {
+            id: imgId,
+            title: entry.t || srcImg.title,
+            groupName: entry.g || owner?.name || "",
+            url: clonedUrl,
+            count: entry.c || 1
+          });
+        }
+      } else {
+        // Fallback: v1 (previous export format) - keep existing logic
+        // Restore groups and images
+        for (const g of payload.groups || []) {
+          const restoredImages = [];
+          for (const img of (g.images || [])) {
+            const blobUrl = await dataUrlToBlobUrl(img.dataUrl);
+            restoredImages.push({ id: img.id, name: img.name, title: img.title, url: blobUrl });
+          }
+          state.groups.push({ id: g.id, name: g.name, rarity: g.rarity, images: restoredImages });
+        }
+        state.nextId = Math.max(payload.nextId || 1, ...state.groups.map(g => g.id + 1), 1);
+        for (const it of (payload.inventory || [])) {
+          const imgOwner = state.groups.find(g => g.images.some(img => img.id === it.id));
+          const srcImg = imgOwner?.images.find(img => img.id === it.id);
+          if (!srcImg) continue;
+          const clonedUrl = await cloneImageUrl(srcImg.url);
+          state.inventory.set(it.id, {
+            id: it.id,
+            title: it.title,
+            groupName: imgOwner?.name || it.groupName,
+            url: clonedUrl,
+            count: it.count || 1
+          });
+        }
+      }
+
+      render();
+      renderInventory();
+      alert("Import completed.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to import file.");
+    } finally {
+      hideBusy();
+    }
+  };
+
+  // Wire buttons
+  exportBtn?.addEventListener("click", exportData);
+  importBtn?.addEventListener("click", () => importInput?.click());
+  importInput?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (file) await importData(file);
+    e.target.value = ""; // reset for next import
+  });
 
   // Initial render
   render();

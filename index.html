@@ -41,6 +41,11 @@
   <main class="container">
     <header class="app-header">
       <h1>Custom Gacha Maker</h1>
+      <div class="row gap">
+        <button id="exportBtn" class="btn">Export JSON</button>
+        <input id="importInput" type="file" accept="application/json" style="display:none" />
+        <button id="importBtn" class="btn">Import JSON</button>
+      </div>
     </header>
 
     <section class="create-group card">
@@ -122,6 +127,14 @@
         </div>
         <div id="modalThumbs" class="thumbs-strip"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Busy overlay -->
+  <div id="busyOverlay" class="busy hidden" aria-hidden="true">
+    <div class="busy-box">
+      <div class="busy-spinner" aria-hidden="true"></div>
+      <div id="busyText" class="busy-text">Working...</div>
     </div>
   </div>
 
