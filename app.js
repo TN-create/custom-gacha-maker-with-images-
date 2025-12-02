@@ -908,7 +908,9 @@
   // Compact export (schema v2)
   const exportData = async () => {
     const defaultName = `gacha-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
-    const name = prompt("Enter export file name (without extension):", defaultName) || defaultName;
+    const result = prompt("Enter export file name (without extension):", defaultName);
+    if (result === null) return; // user pressed Cancel -> do not export
+    const name = (result.trim() || defaultName);
 
     showBusy("Exporting...");
     try {
