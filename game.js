@@ -123,10 +123,11 @@ const Game = (() => {
     // Generate enemy team (1-4 enemies based on player team size)
     const enemyCount = Math.min(4, Math.max(1, playerTeam.length));
     enemyTeam = [];
+    const enemyNames = ['Shadow Fiend', 'Dark Knight', 'Void Walker', 'Chaos Lord'];
     for (let i = 0; i < enemyCount; i++) {
       enemyTeam.push(initStats({
         id: `enemy-${i}`,
-        title: `Enemy ${i + 1}`,
+        title: enemyNames[i] || `Enemy ${i + 1}`,
         url: '', // no image for enemies
         groupName: 'Enemies',
       }));
@@ -140,57 +141,92 @@ const Game = (() => {
   function renderBattleUI() {
     playScreen.innerHTML = `
       <div class="battle-arena">
-        <div class="battle-main">
-          <div class="fighter-slot enemy-fighter">
-            <div class="fighter-card" id="activeEnemy"></div>
+        <!-- Team Bar at Top -->
+        <div class="battle-teams-bar">
+          <div class="team-bar-side player-side">
+            <div class="team-bar-label">Your Team</div>
+            <div class="team-bar-cards" id="playerBarCards"></div>
           </div>
-          <div class="battle-vs">VS</div>
-          <div class="fighter-slot player-fighter">
-            <div class="fighter-card" id="activePlayer"></div>
+          <div class="team-bar-side enemy-side">
+            <div class="team-bar-label">Enemy Team</div>
+            <div class="team-bar-cards" id="enemyBarCards"></div>
           </div>
         </div>
-        <div class="battle-teams">
-          <div class="team-row enemy-team">
-            <h4>Enemy Team</h4>
-            <div class="team-cards" id="enemyTeamCards"></div>
+        
+        <!-- Main Battle Stage -->
+        <div class="battle-stage">
+          <div class="fighter-stage-slot player-slot" id="playerFighterSlot"></div>
+          
+          <div class="battle-vs-divider">
+            <div class="vs-lightning"></div>
+            <div class="vs-orb">VS</div>
           </div>
-          <div class="team-row player-team">
-            <h4>Your Team</h4>
-            <div class="team-cards" id="playerTeamCards"></div>
+          
+          <div class="fighter-stage-slot enemy-slot" id="enemyFighterSlot"></div>
+        </div>
+        
+        <!-- Log Toggle Button -->
+        <button class="log-toggle-btn" id="logToggleBtn" type="button" aria-label="Toggle Battle Log">
+          📜 Log
+        </button>
+        
+        <!-- Slide-out Battle Log Panel -->
+        <div class="battle-log-panel" id="battleLogPanel">
+          <div class="log-panel-header">
+            <span>Battle Log</span>
+            <button class="log-close-btn" id="logCloseBtn" type="button" aria-label="Close Log">×</button>
           </div>
+          <div class="battle-log" id="battleLog"></div>
         </div>
       </div>
-      <div class="battle-log" id="battleLog"></div>
     `;
+
+    // Wire up log toggle
+    const logToggleBtn = document.getElementById('logToggleBtn');
+    const logPanel = document.getElementById('battleLogPanel');
+    const logCloseBtn = document.getElementById('logCloseBtn');
+    
+    logToggleBtn?.addEventListener('click', () => {
+      logPanel?.classList.toggle('open');
+    });
+    
+    logCloseBtn?.addEventListener('click', () => {
+      logPanel?.classList.remove('open');
+    });
 
     updateBattleCards();
   }
 
   function updateBattleCards() {
-    const activeEnemyEl = document.getElementById('activeEnemy');
-    const activePlayerEl = document.getElementById('activePlayer');
-    const enemyTeamEl = document.getElementById('enemyTeamCards');
-    const playerTeamEl = document.getElementById('playerTeamCards');
+    const enemySlot = document.getElementById('enemyFighterSlot');
+    const playerSlot = document.getElementById('playerFighterSlot');
+    const enemyBarEl = document.getElementById('enemyBarCards');
+    const playerBarEl = document.getElementById('playerBarCards');
     
-    if (!activeEnemyEl || !activePlayerEl) return;
+    if (!enemySlot || !playerSlot) return;
 
     // Find active fighters
     const activeEnemy = enemyTeam.find(c => c.hp > 0);
     const activePlayer = playerTeam.find(c => c.hp > 0);
 
     // Render active fighters (large)
-    activeEnemyEl.innerHTML = activeEnemy ? renderActiveFighter(activeEnemy, true) : '<div class="fighter-empty">Defeated</div>';
-    activePlayerEl.innerHTML = activePlayer ? renderActiveFighter(activePlayer, false) : '<div class="fighter-empty">Defeated</div>';
+    enemySlot.innerHTML = activeEnemy 
+      ? renderActiveFighter(activeEnemy, true) 
+      : '<div class="fighter-empty-slot">Defeated!</div>';
+    
+    playerSlot.innerHTML = activePlayer 
+      ? renderActiveFighter(activePlayer, false) 
+      : '<div class="fighter-empty-slot">Defeated!</div>';
 
-    // Render team cards (small) - exclude active fighter
-    if (enemyTeamEl) {
-      enemyTeamEl.innerHTML = enemyTeam
-        .map((c, i) => renderTeamCard(c, c === activeEnemy, true))
+    // Render team bar cards (small)
+    if (enemyBarEl) {
+      enemyBarEl.innerHTML = enemyTeam
+        .map(c => renderMiniCard(c, c === activeEnemy, true))
         .join('');
     }
-    if (playerTeamEl) {
-      playerTeamEl.innerHTML = playerTeam
-        .map((c, i) => renderTeamCard(c, c === activePlayer, false))
+    if (playerBarEl) {
+      playerBarEl.innerHTML = playerTeam
+        .map(c => renderMiniCard(c, c === activePlayer, false))
         .join('');
     }
   }
@@ -198,29 +234,40 @@ const Game = (() => {
   function renderActiveFighter(card, isEnemy) {
     const hpPercent = Math.max(0, (card.hp / card.maxHp) * 100);
     const sideClass = isEnemy ? 'enemy' : 'player';
+    const isLowHp = hpPercent <= 25;
 
     return `
-      <div class="active-fighter ${sideClass}">
-        <div class="fighter-image">
+      <div class="active-fighter-card ${sideClass}" data-id="${card.id}">
+        <div class="fighter-portrait">
           ${card.url 
             ? `<img src="${card.url}" alt="${card.title}" />` 
-            : `<div class="enemy-placeholder-lg">👹</div>`}
+            : `<div class="enemy-portrait-placeholder">👹</div>`}
+          <div class="portrait-overlay"></div>
+          <div class="side-glow"></div>
         </div>
-        <div class="fighter-stats">
-          <div class="fighter-name">${card.title}</div>
-          <div class="fighter-hp">
-            <div class="hp-bar-lg">
-              <div class="hp-fill-lg" style="width: ${hpPercent}%"></div>
+        <div class="fighter-info-panel">
+          <div class="fighter-name-row">
+            <div class="fighter-name-lg">${card.title}</div>
+            <div class="fighter-atk-badge">
+              <span class="atk-icon">⚔️</span>
+              <span>${card.attack}</span>
             </div>
-            <span class="hp-text-lg">${Math.max(0, card.hp)} / ${card.maxHp}</span>
           </div>
-          <div class="fighter-atk">⚔️ ATK: ${card.attack}</div>
+          <div class="hp-container-lg">
+            <div class="hp-bar-outer">
+              <div class="hp-bar-inner ${isLowHp ? 'low' : ''}" style="width: ${hpPercent}%"></div>
+            </div>
+            <div class="hp-text-row">
+              <span>HP</span>
+              <span class="hp-numbers">${Math.max(0, card.hp)} / ${card.maxHp}</span>
+            </div>
+          </div>
         </div>
       </div>
     `;
   }
 
-  function renderTeamCard(card, isActive, isEnemy) {
+  function renderMiniCard(card, isActive, isEnemy) {
     const hpPercent = Math.max(0, (card.hp / card.maxHp) * 100);
     const isDead = card.hp <= 0;
     const activeClass = isActive ? 'active' : '';
@@ -228,14 +275,12 @@ const Game = (() => {
     const sideClass = isEnemy ? 'enemy' : 'player';
 
     return `
-      <div class="team-card ${activeClass} ${deadClass} ${sideClass}">
-        <div class="team-card-img">
-          ${card.url ? `<img src="${card.url}" alt="${card.title}" />` : `<div class="enemy-placeholder-sm">👹</div>`}
-        </div>
-        <div class="team-card-hp">
-          <div class="hp-bar-sm">
-            <div class="hp-fill-sm" style="width: ${hpPercent}%"></div>
-          </div>
+      <div class="team-mini-card ${activeClass} ${deadClass} ${sideClass}">
+        ${card.url 
+          ? `<img src="${card.url}" alt="${card.title}" />` 
+          : `<div class="enemy-placeholder-mini">👹</div>`}
+        <div class="mini-hp">
+          <div class="mini-hp-fill" style="width: ${hpPercent}%"></div>
         </div>
       </div>
     `;
@@ -250,9 +295,37 @@ const Game = (() => {
     }
   }
 
+  function showDamage(targetId, damage, isEnemy) {
+    const card = document.querySelector(`.active-fighter-card[data-id="${targetId}"]`);
+    if (!card) return;
+
+    // Add hit animation
+    card.classList.add('hit');
+    setTimeout(() => card.classList.remove('hit'), 300);
+
+    // Create damage popup
+    const popup = document.createElement('div');
+    popup.className = 'damage-popup';
+    popup.textContent = `-${damage}`;
+    popup.style.left = '50%';
+    popup.style.top = '30%';
+    popup.style.transform = 'translateX(-50%)';
+    card.appendChild(popup);
+    
+    setTimeout(() => popup.remove(), 1000);
+  }
+
+  function showAttackAnimation(attackerId, isEnemy) {
+    const card = document.querySelector(`.active-fighter-card[data-id="${attackerId}"]`);
+    if (!card) return;
+    
+    card.classList.add('attacking');
+    setTimeout(() => card.classList.remove('attacking'), 400);
+  }
+
   async function runBattle() {
     await delay(500);
-    addLog('⚔️ Battle starts!');
+    addLog('⚔️ Battle begins!');
 
     while (true) {
       // Get active fighters (first alive on each side)
@@ -277,29 +350,39 @@ const Game = (() => {
 
       // Player attacks first
       await delay(800);
+      showAttackAnimation(playerFighter.id, false);
+      await delay(200);
+      
       const playerDmg = playerFighter.attack + Math.floor(Math.random() * 10) - 5;
       const actualPlayerDmg = Math.max(1, playerDmg);
       enemyFighter.hp -= actualPlayerDmg;
-      addLog(`${playerFighter.title} attacks ${enemyFighter.title} for ${actualPlayerDmg} damage!`);
+      
+      showDamage(enemyFighter.id, actualPlayerDmg, true);
+      addLog(`⚔️ ${playerFighter.title} strikes ${enemyFighter.title} for <strong>${actualPlayerDmg}</strong> damage!`);
       updateBattleCards();
 
       if (enemyFighter.hp <= 0) {
         await delay(500);
-        addLog(`💥 ${enemyFighter.title} defeated!`);
+        addLog(`💥 ${enemyFighter.title} has fallen!`);
         continue;
       }
 
       // Enemy attacks
       await delay(800);
+      showAttackAnimation(enemyFighter.id, true);
+      await delay(200);
+      
       const enemyDmg = enemyFighter.attack + Math.floor(Math.random() * 10) - 5;
       const actualEnemyDmg = Math.max(1, enemyDmg);
       playerFighter.hp -= actualEnemyDmg;
-      addLog(`${enemyFighter.title} attacks ${playerFighter.title} for ${actualEnemyDmg} damage!`);
+      
+      showDamage(playerFighter.id, actualEnemyDmg, false);
+      addLog(`🔥 ${enemyFighter.title} attacks ${playerFighter.title} for <strong>${actualEnemyDmg}</strong> damage!`);
       updateBattleCards();
 
       if (playerFighter.hp <= 0) {
         await delay(500);
-        addLog(`💥 ${playerFighter.title} defeated!`);
+        addLog(`💥 ${playerFighter.title} has fallen!`);
       }
     }
   }
@@ -309,10 +392,19 @@ const Game = (() => {
     playBtn.disabled = false;
     playBtn.textContent = '🔄 Play Again';
 
-    const resultEl = document.createElement('div');
-    resultEl.className = `battle-result ${won ? 'win' : 'lose'}`;
-    resultEl.innerHTML = won ? '<h3>🏆 Victory!</h3>' : '<h3>💀 Defeat</h3>';
-    playScreen.insertBefore(resultEl, playScreen.firstChild);
+    const arena = playScreen.querySelector('.battle-arena');
+    if (arena) {
+      const resultOverlay = document.createElement('div');
+      resultOverlay.className = 'battle-result-overlay';
+      resultOverlay.innerHTML = `
+        <div class="battle-result-box ${won ? 'win' : 'lose'}">
+          <div class="battle-result-icon">${won ? '🏆' : '💀'}</div>
+          <h3 class="battle-result-title">${won ? 'Victory!' : 'Defeat'}</h3>
+          <p class="battle-result-sub">${won ? 'Your team conquered the battle!' : 'Better luck next time...'}</p>
+        </div>
+      `;
+      arena.appendChild(resultOverlay);
+    }
   }
 
   function resetGame() {

@@ -1008,10 +1008,10 @@ html, body {
 }
 .busy-text { color: var(--text); font-size: 14px; }
 
-/* Play section */
+/* Play section - increased height for larger fighters */
 .play-screen {
-  min-height: 280px;
-  background: #0e1120;
+  min-height: 520px;
+  background: linear-gradient(180deg, #0a0d18 0%, #0e1120 50%, #0a0d18 100%);
   border: 1px solid var(--border);
   border-radius: 10px;
   margin: 12px 0;
@@ -1019,17 +1019,6 @@ html, body {
   place-items: center;
   position: relative;
   overflow: hidden;
-}
-.play-placeholder {
-  color: var(--muted);
-  font-size: 14px;
-  text-align: center;
-}
-.play-controls {
-  margin-top: 8px;
-}
-.play-controls .btn {
-  min-width: 120px;
 }
 
 /* Game Selection UI */
@@ -1101,366 +1090,883 @@ html, body {
   color: var(--muted);
 }
 
-/* Battle Arena */
+/* ========== BATTLE ARENA REDESIGN ========== */
+
 .battle-arena {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  width: 100%;
-}
-
-.battle-main {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  min-height: 280px;
-}
-
-.fighter-slot {
-  flex: 1;
-  max-width: 200px;
-  display: flex;
-  justify-content: center;
-}
-
-.fighter-card {
-  width: 100%;
-}
-
-.battle-vs {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--accent);
-  text-shadow: 0 0 16px rgba(79,124,255,.7);
-  flex-shrink: 0;
-  padding: 0 8px;
-}
-
-/* Active Fighter (Large) */
-.active-fighter {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 12px;
-  background: linear-gradient(145deg, #1a1f35 0%, #141729 100%);
-  border: 2px solid var(--border);
-  transition: border-color .3s ease, box-shadow .3s ease;
-}
-
-.active-fighter.enemy {
-  border-color: rgba(255,93,108,.5);
-  box-shadow: 0 0 20px rgba(255,93,108,.25);
-}
-
-.active-fighter.player {
-  border-color: rgba(47,191,113,.5);
-  box-shadow: 0 0 20px rgba(47,191,113,.25);
-}
-
-.fighter-image {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  max-height: 220px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #0e1120;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fighter-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center top;
+  min-height: 500px;
+  position: relative;
+  background: radial-gradient(ellipse at 50% 80%, rgba(79,124,255,.08) 0%, transparent 60%);
 }
 
-.enemy-placeholder-lg {
-  font-size: 64px;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #3a1525 0%, #1a0f18 100%);
+/* Team Bar - Positioned at top with opacity */
+.battle-teams-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(10,13,24,.95) 0%, rgba(10,13,24,.7) 70%, transparent 100%);
+  position: relative;
+  z-index: 10;
 }
 
-.fighter-stats {
-  width: 100%;
+.team-bar-side {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.fighter-name {
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.team-bar-side.player-side {
+  align-items: flex-start;
 }
 
-.fighter-hp {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.team-bar-side.enemy-side {
+  align-items: flex-end;
 }
 
-.hp-bar-lg {
-  width: 100%;
-  height: 12px;
-  background: #0e1120;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.hp-fill-lg {
-  height: 100%;
-  background: linear-gradient(90deg, var(--danger) 0%, var(--success) 100%);
-  border-radius: 5px;
-  transition: width .4s ease;
-}
-
-.hp-text-lg {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-}
-
-.fighter-atk {
-  font-size: 13px;
-  color: var(--text);
-  text-align: center;
-  font-weight: 500;
-}
-
-.fighter-empty {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  max-height: 220px;
-  display: grid;
-  place-items: center;
-  background: rgba(0,0,0,.3);
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* Team Cards Row */
-.battle-teams {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.team-row {
-  flex: 1;
-}
-
-.team-row h4 {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--muted);
+.team-bar-label {
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: 1px;
+  font-weight: 600;
 }
 
-.enemy-team h4 { color: var(--danger); }
-.player-team h4 { color: var(--success); text-align: right; }
+.enemy-side .team-bar-label {
+  color: var(--danger);
+  text-shadow: 0 0 8px rgba(255,93,108,.5);
+}
 
-.team-cards {
+.player-side .team-bar-label {
+  color: var(--success);
+  text-shadow: 0 0 8px rgba(47,191,113,.5);
+}
+
+.team-bar-cards {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
-.enemy-team .team-cards { justify-content: flex-start; }
-.player-team .team-cards { justify-content: flex-end; }
+.enemy-side .team-bar-cards {
+  flex-direction: row-reverse;
+}
 
-/* Team Card (Small) */
-.team-card {
-  width: 50px;
+/* Small Team Cards in Bar */
+.team-mini-card {
+  width: 48px;
+  height: 72px;
   border-radius: 6px;
   overflow: hidden;
   background: #141729;
   border: 2px solid var(--border);
-  opacity: 0.5;
-  transition: opacity .2s ease, border-color .2s ease, transform .2s ease;
+  position: relative;
+  transition: all .3s ease;
+  opacity: 0.6;
 }
 
-.team-card.active {
+.team-mini-card.active {
   opacity: 1;
-  transform: scale(1.1);
+  transform: scale(1.08);
+  z-index: 2;
 }
 
-.team-card.active.enemy {
+.team-mini-card.active.enemy {
   border-color: var(--danger);
-  box-shadow: 0 0 8px rgba(255,93,108,.4);
+  box-shadow: 0 0 12px rgba(255,93,108,.5), 0 4px 16px rgba(0,0,0,.5);
 }
 
-.team-card.active.player {
+.team-mini-card.active.player {
   border-color: var(--success);
-  box-shadow: 0 0 8px rgba(47,191,113,.4);
+  box-shadow: 0 0 12px rgba(47,191,113,.5), 0 4px 16px rgba(0,0,0,.5);
 }
 
-.team-card.dead {
+.team-mini-card.dead {
   opacity: 0.25;
-  filter: grayscale(1);
+  filter: grayscale(1) brightness(0.6);
+  transform: scale(0.92);
 }
 
-.team-card-img {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  max-height: 70px;
-  overflow: hidden;
-  background: #0e1120;
+.team-mini-card.dead::after {
+  content: '💀';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  background: rgba(0,0,0,.5);
 }
 
-.team-card-img img {
+.team-mini-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center top;
 }
 
-.enemy-placeholder-sm {
+.team-mini-card .mini-hp {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(0,0,0,.7);
+}
+
+.team-mini-card .mini-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--danger), var(--success));
+  transition: width .3s ease;
+}
+
+.enemy-placeholder-mini {
   width: 100%;
   height: 100%;
   display: grid;
   place-items: center;
-  font-size: 20px;
-  background: linear-gradient(135deg, #2a1520 0%, #1a0f18 100%);
+  font-size: 18px;
+  background: linear-gradient(145deg, #2a1520 0%, #1a0f18 100%);
 }
 
-.team-card-hp {
-  padding: 3px;
+/* Main Battle Stage */
+.battle-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px 24px 24px;
+  position: relative;
 }
 
-.hp-bar-sm {
+/* VS Divider */
+.battle-vs-divider {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+
+.vs-orb {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #4f7cff 0%, #1a2550 60%, #0a0d18 100%);
+  border: 2px solid rgba(79,124,255,.6);
+  box-shadow: 
+    0 0 20px rgba(79,124,255,.5),
+    0 0 40px rgba(79,124,255,.25),
+    inset 0 0 20px rgba(255,255,255,.1);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255,255,255,.8);
+  animation: vsPulse 2s ease-in-out infinite;
+}
+
+@keyframes vsPulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(79,124,255,.5), 0 0 40px rgba(79,124,255,.25), inset 0 0 20px rgba(255,255,255,.1);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(79,124,255,.7), 0 0 60px rgba(79,124,255,.35), inset 0 0 25px rgba(255,255,255,.15);
+    transform: scale(1.05);
+  }
+}
+
+.vs-lightning {
+  position: absolute;
+  top: 50%;
+  width: 200%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(79,124,255,.6), transparent);
+  transform: translateY(-50%);
+  z-index: -1;
+}
+
+/* Active Fighter Slots */
+.fighter-stage-slot {
+  flex: 1;
+  max-width: 280px;
+  display: flex;
+  justify-content: center;
+  perspective: 1000px;
+}
+
+.fighter-stage-slot.player-slot {
+  justify-content: flex-start;
+}
+
+.fighter-stage-slot.enemy-slot {
+  justify-content: flex-end;
+}
+
+/* Large Active Fighter Card */
+.active-fighter-card {
   width: 100%;
-  height: 4px;
-  background: #0e1120;
-  border-radius: 2px;
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
   overflow: hidden;
+  background: linear-gradient(165deg, #1e2744 0%, #141729 40%, #0e1120 100%);
+  border: 2px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  transition: all .4s ease;
+  position: relative;
 }
 
-.hp-fill-sm {
-  height: 100%;
-  background: linear-gradient(90deg, var(--danger), var(--success));
-  border-radius: 2px;
-  transition: width .3s ease;
+.active-fighter-card.player {
+  border-color: rgba(47,191,113,.5);
+  box-shadow: 
+    0 0 30px rgba(47,191,113,.25),
+    0 8px 32px rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(47,191,113,.2);
 }
 
-/* Battle Log adjustments */
-.battle-log {
+.active-fighter-card.enemy {
+  border-color: rgba(255,93,108,.5);
+  box-shadow: 
+    0 0 30px rgba(255,93,108,.25),
+    0 8px 32px rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(255,93,108,.2);
+}
+
+.active-fighter-card.attacking {
+  animation: attackPulse .4s ease;
+}
+
+@keyframes attackPulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.05) translateX(10px); }
+  100% { transform: scale(1); }
+}
+
+.active-fighter-card.enemy.attacking {
+  animation: attackPulseEnemy .4s ease;
+}
+
+@keyframes attackPulseEnemy {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.05) translateX(-10px); }
+  100% { transform: scale(1); }
+}
+
+.active-fighter-card.hit {
+  animation: hitShake .3s ease;
+}
+
+@keyframes hitShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* Fighter Portrait (9:16 preferred) */
+.fighter-portrait {
   width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 320px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0e1120 0%, #080a12 100%);
+}
+
+.fighter-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  transition: transform .3s ease;
+}
+
+.active-fighter-card:hover .fighter-portrait img {
+  transform: scale(1.03);
+}
+
+.fighter-portrait .portrait-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, 
+    transparent 0%, 
+    transparent 50%, 
+    rgba(0,0,0,.4) 80%, 
+    rgba(0,0,0,.8) 100%
+  );
+  pointer-events: none;
+}
+
+.fighter-portrait .side-glow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  opacity: 0.8;
+}
+
+.active-fighter-card.player .side-glow {
+  left: 0;
+  background: linear-gradient(180deg, transparent, var(--success), transparent);
+  box-shadow: 0 0 20px var(--success);
+}
+
+.active-fighter-card.enemy .side-glow {
+  right: 0;
+  background: linear-gradient(180deg, transparent, var(--danger), transparent);
+  box-shadow: 0 0 20px var(--danger);
+}
+
+.enemy-portrait-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 80px;
+  background: linear-gradient(145deg, #3a1525 0%, #1a0f18 50%, #0a0508 100%);
+  text-shadow: 0 0 40px rgba(255,93,108,.5);
+  animation: enemyBreath 3s ease-in-out infinite;
+}
+
+@keyframes enemyBreath {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.02); opacity: 1; }
+}
+
+/* Fighter Info Panel */
+.fighter-info-panel {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.3) 100%);
+}
+
+.fighter-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fighter-name-lg {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.fighter-atk-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fighter-atk-badge .atk-icon {
+  font-size: 12px;
+}
+
+/* HP Bar - Large */
+.hp-container-lg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hp-bar-outer {
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.hp-bar-inner {
+  height: 100%;
+  border-radius: 6px;
+  transition: width .4s ease;
+  position: relative;
+}
+
+.active-fighter-card.player .hp-bar-inner {
+  background: linear-gradient(90deg, #1a5a3a 0%, var(--success) 50%, #5aefab 100%);
+  box-shadow: 0 0 10px rgba(47,191,113,.5), inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+.active-fighter-card.enemy .hp-bar-inner {
+  background: linear-gradient(90deg, #5a1a2a 0%, var(--danger) 50%, #ff8a95 100%);
+  box-shadow: 0 0 10px rgba(255,93,108,.5), inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+.hp-bar-inner::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(255,255,255,.4), rgba(255,255,255,.1));
+  border-radius: 2px;
+}
+
+.hp-bar-inner.low {
+  animation: hpCritical 1s ease-in-out infinite;
+}
+
+@keyframes hpCritical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.hp-text-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hp-numbers {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Empty Fighter Slot */
+.fighter-empty-slot {
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 9 / 16;
+  max-height: 400px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(0,0,0,.3);
+  border: 2px dashed var(--border);
+  color: var(--muted);
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Battle Log - Floating at bottom */
+.battle-log-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 100px;
+  padding: 0 16px 12px;
+  background: linear-gradient(0deg, rgba(10,13,24,.95) 0%, rgba(10,13,24,.8) 70%, transparent 100%);
+  overflow: hidden;
+  z-index: 20;
+}
+
+.battle-log {
   max-height: 80px;
   overflow-y: auto;
-  padding: 8px 12px;
-  background: #0a0c14;
-  border-top: 1px solid var(--border);
-  border-radius: 0 0 10px 10px;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
-/* Play screen height adjustment for battle */
-.play-screen {
-  min-height: 380px;
+.battle-log::-webkit-scrollbar {
+  width: 4px;
 }
 
-/* Game responsive - updated */
-@media (max-width: 640px) {
+.battle-log::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.log-entry {
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  animation: logSlide .3s ease;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+  color: var(--text);
+}
+
+@keyframes logSlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Battle Result Overlay */
+.battle-result-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10,13,24,.9);
+  z-index: 30;
+  animation: resultFade .5s ease;
+}
+
+@keyframes resultFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.battle-result-box {
+  text-align: center;
+  padding: 40px 60px;
+  border-radius: 20px;
+  background: linear-gradient(165deg, #1e2744 0%, #141729 100%);
+  border: 2px solid var(--border);
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+
+.battle-result-box.win {
+  border-color: rgba(47,191,113,.5);
+  box-shadow: 0 0 60px rgba(47,191,113,.3), 0 10px 40px rgba(0,0,0,.5);
+}
+
+.battle-result-box.lose {
+  border-color: rgba(255,93,108,.5);
+  box-shadow: 0 0 60px rgba(255,93,108,.3), 0 10px 40px rgba(0,0,0,.5);
+}
+
+.battle-result-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: resultBounce 1s ease infinite;
+}
+
+@keyframes resultBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.battle-result-title {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.battle-result-box.win .battle-result-title {
+  color: var(--success);
+  text-shadow: 0 0 20px rgba(47,191,113,.5);
+}
+
+.battle-result-box.lose .battle-result-title {
+  color: var(--danger);
+  text-shadow: 0 0 20px rgba(255,93,108,.5);
+}
+
+.battle-result-sub {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Damage Number Popup */
+.damage-popup {
+  position: absolute;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--danger);
+  text-shadow: 0 0 10px rgba(255,93,108,.8), 0 2px 4px rgba(0,0,0,.5);
+  pointer-events: none;
+  animation: damageFloat 1s ease-out forwards;
+  z-index: 50;
+}
+
+.damage-popup.heal {
+  color: var(--success);
+  text-shadow: 0 0 10px rgba(47,191,113,.8), 0 2px 4px rgba(0,0,0,.5);
+}
+
+@keyframes damageFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  50% { opacity: 1; transform: translateY(-30px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.8); }
+}
+
+/* Responsive Battle */
+@media (max-width: 768px) {
   .play-screen {
-    min-height: 320px;
+    min-height: 460px;
   }
   
-  .battle-main {
-    gap: 12px;
-    min-height: 220px;
+  .battle-arena {
+    min-height: 440px;
   }
   
-  .fighter-slot {
+  .battle-stage {
+    gap: 16px;
+    padding: 12px 16px 20px;
+  }
+  
+  .fighter-stage-slot {
+    max-width: 180px;
+  }
+  
+  .fighter-portrait {
+    max-height: 240px;
+  }
+  
+  .vs-orb {
+    width: 50px;
+    height: 50px;
+    font-size: 18px;
+  }
+  
+  .team-mini-card {
+    width: 40px;
+    height: 60px;
+  }
+  
+  .enemy-portrait-placeholder {
+    font-size: 60px;
+  }
+}
+
+@media (max-width: 520px) {
+  .play-screen {
+    min-height: 400px;
+  }
+  
+  .battle-teams-bar {
+    padding: 8px 12px;
+  }
+  
+  .battle-stage {
+    gap: 10px;
+    padding: 8px 10px 16px;
+  }
+  
+  .fighter-stage-slot {
     max-width: 140px;
   }
   
-  .fighter-image {
-    max-height: 160px;
+  .fighter-portrait {
+    max-height: 180px;
   }
   
-  .battle-vs {
-    font-size: 20px;
-    padding: 0 4px;
+  .fighter-name-lg {
+    font-size: 13px;
   }
   
-  .enemy-placeholder-lg {
-    font-size: 48px;
+  .fighter-atk-badge {
+    font-size: 11px;
+    padding: 3px 8px;
   }
   
-  .fighter-name {
-    font-size: 12px;
-  }
-  
-  .hp-bar-lg {
+  .hp-bar-outer {
     height: 10px;
   }
   
-  .hp-text-lg {
-    font-size: 10px;
+  .vs-orb {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
   }
   
-  .fighter-atk {
-    font-size: 11px;
+  .team-mini-card {
+    width: 34px;
+    height: 50px;
   }
   
-  .battle-teams {
-    flex-direction: column;
-    gap: 12px;
+  .enemy-portrait-placeholder {
+    font-size: 48px;
   }
   
-  .team-row h4 {
-    text-align: center !important;
+  .battle-result-box {
+    padding: 30px 40px;
   }
   
-  .team-cards {
-    justify-content: center !important;
+  .battle-result-icon {
+    font-size: 48px;
   }
   
-  .team-card {
-    width: 44px;
-  }
-  
-  .team-card-img {
-    max-height: 60px;
-  }
-  
-  .fighter-empty {
-    max-height: 160px;
+  .battle-result-title {
+    font-size: 24px;
   }
 }
 
-@media (max-width: 400px) {
-  .fighter-slot {
-    max-width: 120px;
+/* Remove old battle styles - replaced by new design */
+
+/* Log Toggle Button */
+.log-toggle-btn {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  padding: 10px 16px;
+  background: rgba(20,23,41,.9);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 25;
+  transition: all .2s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  backdrop-filter: blur(8px);
+}
+
+.log-toggle-btn:hover {
+  background: rgba(30,35,55,.95);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(79,124,255,.3), 0 4px 16px rgba(0,0,0,.4);
+}
+
+.log-toggle-btn:active {
+  transform: scale(0.97);
+}
+
+/* Slide-out Log Panel */
+.battle-log-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 90vw;
+  background: linear-gradient(180deg, rgba(14,17,32,.98) 0%, rgba(10,13,24,.98) 100%);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 32px rgba(0,0,0,.5);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .3s ease;
+  backdrop-filter: blur(12px);
+}
+
+.battle-log-panel.open {
+  transform: translateX(0);
+}
+
+.log-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(20,23,41,.5);
+}
+
+.log-panel-header span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.5px;
+}
+
+.log-close-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.log-close-btn:hover {
+  background: rgba(255,93,108,.2);
+  border-color: rgba(255,93,108,.4);
+}
+
+/* Battle Log inside panel */
+.battle-log-panel .battle-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.battle-log-panel .battle-log::-webkit-scrollbar {
+  width: 6px;
+}
+
+.battle-log-panel .battle-log::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.battle-log-panel .log-entry {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(255,255,255,.03);
+  border-radius: 8px;
+  border-left: 3px solid var(--border);
+  animation: logSlide .3s ease;
+}
+
+.battle-log-panel .log-entry:last-child {
+  color: var(--text);
+  background: rgba(79,124,255,.08);
+  border-left-color: var(--accent);
+}
+
+/* Remove old floating log styles */
+.battle-log-container {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .battle-log-panel {
+    width: 280px;
   }
   
-  .fighter-image {
-    max-height: 130px;
-  }
-  
-  .battle-vs {
-    font-size: 16px;
-  }
-  
-  .team-card {
-    width: 38px;
+  .log-toggle-btn {
+    bottom: 12px;
+    right: 12px;
+    padding: 8px 14px;
+    font-size: 12px;
   }
 }
 
-/* Remove old battle styles that are no longer used */
-/* .battle-side, .battle-card, .battle-card-img, .battle-card-info, etc. are replaced */
+@media (max-width: 520px) {
+  .battle-log-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .log-toggle-btn {
+    bottom: 10px;
+    right: 10px;
+    padding: 8px 12px;
+  }
+  
+  /* Adjust team bar for swapped layout */
+  .team-bar-side.player-side {
+    align-items: flex-start;
+  }
+  
+  .team-bar-side.enemy-side {
+    align-items: flex-end;
+  }
+}
