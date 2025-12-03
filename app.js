@@ -26,6 +26,12 @@
     inventory: new Map(),
   };
 
+  // Expose inventory for game module
+  window.GachaApp = {
+    getInventory: () => Array.from(state.inventory.values()),
+    getGroups: () => state.groups.map(g => ({ name: g.name, rarity: g.rarity })),
+  };
+
   const refs = {
     createForm: document.getElementById("createGroupForm"),
     nameInput: document.getElementById("groupName"),
