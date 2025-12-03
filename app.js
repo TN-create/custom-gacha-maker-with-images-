@@ -63,6 +63,9 @@
     exportBtn: document.getElementById("exportBtn"),
     importBtn: document.getElementById("importBtn"),
     importInput: document.getElementById("importInput"),
+    // Play section refs
+    playScreen: document.getElementById("playScreen"),
+    playBtn: document.getElementById("playBtn"),
   };
 
   // Helpers
@@ -1062,6 +1065,16 @@
     if (file) await importData(file);
     e.target.value = ""; // reset for next import
   });
+
+  // Play button handler (placeholder for game logic)
+  const startGame = () => {
+    if (!refs.playScreen) return;
+    refs.playScreen.classList.add("active");
+    // Game logic will be implemented here
+    console.log("Game started!");
+  };
+
+  refs.playBtn?.addEventListener("click", startGame);
 
   // Initial render
   render();

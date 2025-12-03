@@ -1011,3 +1011,75 @@ html, body {
   animation: spin .9s linear infinite;
 }
 .busy-text { color: var(--text); font-size: 14px; }
+
+/* Play section */
+.play-screen {
+  width: 100%;
+  min-height: 300px;
+  background: #0e1120;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.play-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px;
+}
+
+.play-placeholder .play-icon {
+  font-size: 48px;
+  opacity: 0.6;
+  filter: grayscale(0.4);
+}
+
+.play-placeholder p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Play button pulse animation */
+.play .btn.primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.play .btn.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: translateX(-100%);
+  animation: playBtnShine 3s ease-in-out infinite;
+}
+
+@keyframes playBtnShine {
+  0%, 100% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+}
+
+/* Active game state */
+.play-screen.active {
+  background: #080a12;
+}
+
+.play-screen.active .play-placeholder {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .play-screen {
+    min-height: 240px;
+  }
+  .play-placeholder .play-icon {
+    font-size: 36px;
+  }
+}
