@@ -13,19 +13,34 @@ const Game = (() => {
   let enemyTeam = [];  // generated enemies (max 4)
   let battleLog = [];
 
-  // Generate stats for a card
-  const generateStats = (card) => ({
-    ...card,
-    maxHp: 50 + Math.floor(Math.random() * 50),
-    hp: 0, // set after
-    attack: 10 + Math.floor(Math.random() * 20),
-    abilities: [], // blank for now
-  });
+  // Generate stats for a card - uses stored stats from inventory
+  const initPlayerStats = (card) => {
+    const fighter = {
+      ...card,
+      maxHp: card.maxHp || 50,
+      hp: card.maxHp || 50,
+      attack: card.attack || 10,
+      ability: card.ability || null,
+      abilityUses: {},
+      damageMultiplier: 1,
+    };
+    // Apply passive ability modifiers
+    if (window.Abilities && fighter.ability) {
+      window.Abilities.applyPassiveModifiers(fighter);
+    }
+    return fighter;
+  };
 
-  const initStats = (card) => {
-    const stats = generateStats(card);
-    stats.hp = stats.maxHp;
-    return stats;
+  // Generate enemy stats based on average player team stats
+  const generateEnemyStats = (playerTeam) => {
+    const avgHp = playerTeam.reduce((sum, c) => sum + (c.maxHp || 50), 0) / playerTeam.length;
+    const avgAtk = playerTeam.reduce((sum, c) => sum + (c.attack || 10), 0) / playerTeam.length;
+    
+    const variance = () => 0.8 + Math.random() * 0.4;
+    return {
+      maxHp: Math.floor(avgHp * variance()),
+      attack: Math.floor(avgAtk * variance()),
+    };
   };
 
   function init() {
@@ -117,20 +132,34 @@ const Game = (() => {
     playBtn.textContent = '⚔️ Battle in progress...';
     playBtn.disabled = true;
 
-    // Initialize player team with stats
-    playerTeam = playerTeam.map(initStats);
+    // Initialize player team with their permanent stats
+    playerTeam = playerTeam.map(initPlayerStats);
 
     // Generate enemy team (1-4 enemies based on player team size)
     const enemyCount = Math.min(4, Math.max(1, playerTeam.length));
     enemyTeam = [];
     const enemyNames = ['Shadow Fiend', 'Dark Knight', 'Void Walker', 'Chaos Lord'];
     for (let i = 0; i < enemyCount; i++) {
-      enemyTeam.push(initStats({
+      const enemyStats = generateEnemyStats(playerTeam);
+      // Give enemies a random ability too
+      const enemyAbility = window.Abilities?.getRandomAbility() || null;
+      const enemy = {
         id: `enemy-${i}`,
         title: enemyNames[i] || `Enemy ${i + 1}`,
-        url: '', // no image for enemies
+        url: '',
         groupName: 'Enemies',
-      }));
+        maxHp: enemyStats.maxHp,
+        hp: enemyStats.maxHp,
+        attack: enemyStats.attack,
+        ability: enemyAbility,
+        abilityUses: {},
+        damageMultiplier: 1,
+      };
+      // Apply passive modifiers
+      if (window.Abilities && enemy.ability) {
+        window.Abilities.applyPassiveModifiers(enemy);
+      }
+      enemyTeam.push(enemy);
     }
 
     battleLog = [];
@@ -235,6 +264,9 @@ const Game = (() => {
     const hpPercent = Math.max(0, (card.hp / card.maxHp) * 100);
     const sideClass = isEnemy ? 'enemy' : 'player';
     const isLowHp = hpPercent <= 25;
+    
+    // Get ability display info
+    const abilityInfo = window.Abilities?.getAbilityDisplay(card.ability) || { name: "None", desc: "", color: "#666", icon: "❓" };
 
     return `
       <div class="active-fighter-card ${sideClass}" data-id="${card.id}">
@@ -261,6 +293,10 @@ const Game = (() => {
               <span>HP</span>
               <span class="hp-numbers">${Math.max(0, card.hp)} / ${card.maxHp}</span>
             </div>
+          </div>
+          <div class="fighter-ability" style="border-color: ${abilityInfo.color}">
+            <span class="ability-icon">${abilityInfo.icon}</span>
+            <span class="ability-name" style="color: ${abilityInfo.color}">${abilityInfo.name}</span>
           </div>
         </div>
       </div>
@@ -327,12 +363,18 @@ const Game = (() => {
     await delay(500);
     addLog('⚔️ Battle begins!');
 
+    // Log abilities
+    playerTeam.forEach(p => {
+      if (p.ability) addLog(`${p.title} has <strong>${p.ability.name}</strong>`);
+    });
+    enemyTeam.forEach(e => {
+      if (e.ability) addLog(`${e.title} has <strong>${e.ability.name}</strong>`);
+    });
+
     while (true) {
-      // Get active fighters (first alive on each side)
       const playerFighter = playerTeam.find(c => c.hp > 0);
       const enemyFighter = enemyTeam.find(c => c.hp > 0);
 
-      // Check win/lose conditions
       if (!playerFighter) {
         await delay(500);
         addLog('💀 Your team has been defeated!');
@@ -348,23 +390,57 @@ const Game = (() => {
 
       updateBattleCards();
 
-      // Player attacks first
+      // Process turn effects
+      const playerTurnEffects = window.Abilities?.processTurnEffects(playerFighter, {}) || [];
+      playerTurnEffects.forEach(e => addLog(`${playerFighter.title}: ${e}`));
+      
+      const enemyTurnEffects = window.Abilities?.processTurnEffects(enemyFighter, {}) || [];
+      enemyTurnEffects.forEach(e => addLog(`${enemyFighter.title}: ${e}`));
+
+      // Player attacks
       await delay(800);
       showAttackAnimation(playerFighter.id, false);
       await delay(200);
       
-      const playerDmg = playerFighter.attack + Math.floor(Math.random() * 10) - 5;
-      const actualPlayerDmg = Math.max(1, playerDmg);
-      enemyFighter.hp -= actualPlayerDmg;
+      let baseDamage = playerFighter.attack + Math.floor(Math.random() * 10) - 5;
+      baseDamage = Math.floor(baseDamage * (playerFighter.damageMultiplier || 1));
       
-      showDamage(enemyFighter.id, actualPlayerDmg, true);
-      addLog(`⚔️ ${playerFighter.title} strikes ${enemyFighter.title} for <strong>${actualPlayerDmg}</strong> damage!`);
+      const attackResult = window.Abilities?.calculateDamage(playerFighter, enemyFighter, baseDamage, {}) 
+        || { damage: Math.max(1, baseDamage), effects: [] };
+      
+      if (attackResult.dodged || attackResult.blocked) {
+        addLog(`${playerFighter.title} attacks but ${enemyFighter.title} ${attackResult.effects.join(' ')}`);
+      } else {
+        enemyFighter.hp -= attackResult.damage;
+        
+        // Check for fatal damage survival
+        if (enemyFighter.hp <= 0) {
+          const survival = window.Abilities?.checkFatalDamage(enemyFighter, attackResult.damage);
+          if (survival?.survives) {
+            enemyFighter.hp = survival.newHp;
+            attackResult.effects.push(survival.effect);
+          }
+        }
+        
+        showDamage(enemyFighter.id, attackResult.damage, true);
+        const effectStr = attackResult.effects.length ? ` (${attackResult.effects.join(', ')})` : '';
+        addLog(`⚔️ ${playerFighter.title} strikes ${enemyFighter.title} for <strong>${attackResult.damage}</strong> damage!${effectStr}`);
+      }
+      
       updateBattleCards();
 
       if (enemyFighter.hp <= 0) {
-        await delay(500);
-        addLog(`💥 ${enemyFighter.title} has fallen!`);
-        continue;
+        // Check for revival
+        const revival = window.Abilities?.checkRevival(enemyFighter);
+        if (revival?.revive) {
+          enemyFighter.hp = revival.hp;
+          addLog(`🔥 ${enemyFighter.title} ${revival.effect} (${revival.hp} HP)`);
+          updateBattleCards();
+        } else {
+          await delay(500);
+          addLog(`💥 ${enemyFighter.title} has fallen!`);
+          continue;
+        }
       }
 
       // Enemy attacks
@@ -372,17 +448,44 @@ const Game = (() => {
       showAttackAnimation(enemyFighter.id, true);
       await delay(200);
       
-      const enemyDmg = enemyFighter.attack + Math.floor(Math.random() * 10) - 5;
-      const actualEnemyDmg = Math.max(1, enemyDmg);
-      playerFighter.hp -= actualEnemyDmg;
+      let enemyBaseDamage = enemyFighter.attack + Math.floor(Math.random() * 10) - 5;
+      enemyBaseDamage = Math.floor(enemyBaseDamage * (enemyFighter.damageMultiplier || 1));
       
-      showDamage(playerFighter.id, actualEnemyDmg, false);
-      addLog(`🔥 ${enemyFighter.title} attacks ${playerFighter.title} for <strong>${actualEnemyDmg}</strong> damage!`);
+      const enemyAttackResult = window.Abilities?.calculateDamage(enemyFighter, playerFighter, enemyBaseDamage, {}) 
+        || { damage: Math.max(1, enemyBaseDamage), effects: [] };
+      
+      if (enemyAttackResult.dodged || enemyAttackResult.blocked) {
+        addLog(`${enemyFighter.title} attacks but ${playerFighter.title} ${enemyAttackResult.effects.join(' ')}`);
+      } else {
+        playerFighter.hp -= enemyAttackResult.damage;
+        
+        // Check for fatal damage survival
+        if (playerFighter.hp <= 0) {
+          const survival = window.Abilities?.checkFatalDamage(playerFighter, enemyAttackResult.damage);
+          if (survival?.survives) {
+            playerFighter.hp = survival.newHp;
+            enemyAttackResult.effects.push(survival.effect);
+          }
+        }
+        
+        showDamage(playerFighter.id, enemyAttackResult.damage, false);
+        const effectStr = enemyAttackResult.effects.length ? ` (${enemyAttackResult.effects.join(', ')})` : '';
+        addLog(`🔥 ${enemyFighter.title} attacks ${playerFighter.title} for <strong>${enemyAttackResult.damage}</strong> damage!${effectStr}`);
+      }
+      
       updateBattleCards();
 
       if (playerFighter.hp <= 0) {
-        await delay(500);
-        addLog(`💥 ${playerFighter.title} has fallen!`);
+        // Check for revival
+        const revival = window.Abilities?.checkRevival(playerFighter);
+        if (revival?.revive) {
+          playerFighter.hp = revival.hp;
+          addLog(`🔥 ${playerFighter.title} ${revival.effect} (${revival.hp} HP)`);
+          updateBattleCards();
+        } else {
+          await delay(500);
+          addLog(`💥 ${playerFighter.title} has fallen!`);
+        }
       }
     }
   }

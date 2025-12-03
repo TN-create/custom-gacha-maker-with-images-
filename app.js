@@ -30,6 +30,29 @@
   window.GachaApp = {
     getInventory: () => Array.from(state.inventory.values()),
     getGroups: () => state.groups.map(g => ({ name: g.name, rarity: g.rarity })),
+    // Expose method to calculate stats based on rarity
+    calculateStats: (rarity) => {
+      // Get all groups with rarity > 0 to determine relative rarity
+      const pool = state.groups.filter(g => g.images.length > 0 && g.rarity > 0);
+      const totalRarity = pool.reduce((a, g) => a + g.rarity, 0);
+      
+      if (pool.length <= 1 || totalRarity <= 0) {
+        // Only one group or no valid groups - minimum stats
+        return { hp: 50, attack: 10 };
+      }
+      
+      // Calculate rarity ratio (0 = most common, 1 = rarest)
+      // Lower rarity number = rarer = higher stats
+      const rarityRatio = 1 - (rarity / totalRarity);
+      
+      // Scale stats: rarer items get better stats
+      // HP: 50 (common) to 150 (rare)
+      // Attack: 10 (common) to 40 (rare)
+      const hp = Math.floor(50 + rarityRatio * 100);
+      const attack = Math.floor(10 + rarityRatio * 30);
+      
+      return { hp, attack };
+    },
   };
 
   const refs = {
@@ -567,12 +590,22 @@
       } else {
         // Clone the URL so inventory persists even if the original group/image is deleted
         const clonedUrl = await cloneImageUrl(img.url);
+        // Calculate permanent stats based on group rarity
+        const stats = window.GachaApp.calculateStats(group.rarity);
+        // Assign a random ability
+        const ability = window.Abilities?.getRandomAbility() || null;
         state.inventory.set(key, {
           id: key,
           title: img.title || fileTitle(img.name),
           groupName: group.name,
+          groupRarity: group.rarity,
           url: clonedUrl,
-          count: 1
+          count: 1,
+          // Permanent stats based on rarity
+          maxHp: stats.hp,
+          attack: stats.attack,
+          // Assigned ability
+          ability: ability,
         });
       }
     }
@@ -913,24 +946,24 @@
 
   // Compact export (schema v2)
   const exportData = async () => {
+    // ...existing code up to inventoryOut...
     const defaultName = `gacha-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
     const result = prompt("Enter export file name (without extension):", defaultName);
-    if (result === null) return; // user pressed Cancel -> do not export
+    if (result === null) return;
     const name = (result.trim() || defaultName);
 
     showBusy("Exporting...");
     try {
-      const imagesDict = {}; // id -> { d, n, t }
-      const groupsOut = [];  // [{ id, n, r, i: [ids] }]
+      const imagesDict = {};
+      const groupsOut = [];
 
-      // Collect images across all groups (dedupe)
       for (const g of state.groups) {
         const imgIds = [];
         for (const img of g.images) {
           imgIds.push(img.id);
           if (!imagesDict[img.id]) {
             imagesDict[img.id] = {
-              d: await urlToDataUrl(img.url),      // data URL
+              d: await urlToDataUrl(img.url),
               n: img.name,
               t: img.title || fileTitle(img.name),
             };
@@ -939,10 +972,17 @@
         groupsOut.push({ id: g.id, n: g.name, r: g.rarity, i: imgIds });
       }
 
-      // Inventory as dictionary keyed by image id (compact keys)
+      // Inventory as dictionary keyed by image id (compact keys) - include stats and ability
       const inventoryOut = {};
       for (const it of state.inventory.values()) {
-        inventoryOut[it.id] = { c: it.count, t: it.title, g: it.groupName };
+        inventoryOut[it.id] = { 
+          c: it.count, 
+          t: it.title, 
+          g: it.groupName,
+          hp: it.maxHp,
+          atk: it.attack,
+          ab: it.ability?.id || null,  // Save ability ID
+        };
       }
 
       const payload = {
@@ -1009,17 +1049,27 @@
 
         // Inventory
         for (const [imgId, entry] of Object.entries(payload.inventory || {})) {
-          // Find group name by id
           const owner = state.groups.find(g => g.images.some(img => img.id === imgId));
           const srcImg = owner?.images.find(img => img.id === imgId);
           if (!srcImg) continue;
           const clonedUrl = await cloneImageUrl(srcImg.url);
+          const stats = (entry.hp && entry.atk) 
+            ? { hp: entry.hp, attack: entry.atk }
+            : window.GachaApp.calculateStats(owner?.rarity || 50);
+          // Restore ability from ID or assign new one
+          const ability = entry.ab 
+            ? window.Abilities?.getAbilityById(entry.ab) 
+            : window.Abilities?.getRandomAbility();
           state.inventory.set(imgId, {
             id: imgId,
             title: entry.t || srcImg.title,
             groupName: entry.g || owner?.name || "",
+            groupRarity: owner?.rarity || 50,
             url: clonedUrl,
-            count: entry.c || 1
+            count: entry.c || 1,
+            maxHp: stats.hp,
+            attack: stats.attack,
+            ability: ability || null,
           });
         }
       } else {
@@ -1039,12 +1089,18 @@
           const srcImg = imgOwner?.images.find(img => img.id === it.id);
           if (!srcImg) continue;
           const clonedUrl = await cloneImageUrl(srcImg.url);
+          const stats = window.GachaApp.calculateStats(imgOwner?.rarity || 50);
+          const ability = window.Abilities?.getRandomAbility() || null;
           state.inventory.set(it.id, {
             id: it.id,
             title: it.title,
             groupName: imgOwner?.name || it.groupName,
+            groupRarity: imgOwner?.rarity || 50,
             url: clonedUrl,
-            count: it.count || 1
+            count: it.count || 1,
+            maxHp: stats.hp,
+            attack: stats.attack,
+            ability: ability,
           });
         }
       }

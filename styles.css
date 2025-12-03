@@ -1824,7 +1824,6 @@ html, body {
   z-index: 25;
   transition: all .2s ease;
   box-shadow: 0 4px 16px rgba(0,0,0,.4);
-  backdrop-filter: blur(8px);
 }
 
 .log-toggle-btn:hover {
@@ -1930,43 +1929,110 @@ html, body {
   border-left-color: var(--accent);
 }
 
-/* Remove old floating log styles */
-.battle-log-container {
-  display: none;
+/* Fighter Ability Display */
+.fighter-ability {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid;
+  margin-top: 4px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .battle-log-panel {
-    width: 280px;
-  }
-  
-  .log-toggle-btn {
-    bottom: 12px;
-    right: 12px;
-    padding: 8px 14px;
-    font-size: 12px;
-  }
+.ability-icon {
+  font-size: 14px;
 }
+
+.ability-name {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Selection card ability badge */
+.select-card-ability {
+  position: absolute;
+  bottom: 24px;
+  left: 4px;
+  right: 4px;
+  padding: 3px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 4px;
+  background: rgba(0,0,0,.7);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(4px);
+}
+
+/* Inventory card stats display */
+.inventory .result-card .stats-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+  font-size: 10px;
+  background: rgba(0,0,0,.7);
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+}
+
+.inventory .result-card .stats-badge .stat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inventory .result-card .ability-badge {
+  position: absolute;
+  bottom: 32px;
+  left: 0;
+  right: 0;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,.8), transparent);
+  color: var(--text);
+}
+
+/* Mini card ability indicator */
+.team-mini-card .mini-ability {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 10px;
+  background: rgba(0,0,0,.6);
+  border-radius: 4px;
+  padding: 1px 3px;
+}
+
+/* Ability type colors for badges */
+.ability-offensive { color: #ff6b6b; }
+.ability-defensive { color: #4ecdc4; }
+.ability-utility { color: #ffe66d; }
+.ability-debuff { color: #a855f7; }
+.ability-special { color: #f97316; }
 
 @media (max-width: 520px) {
-  .battle-log-panel {
-    width: 100%;
-    max-width: 100%;
+  .fighter-ability {
+    padding: 4px 8px;
   }
   
-  .log-toggle-btn {
-    bottom: 10px;
-    right: 10px;
-    padding: 8px 12px;
+  .ability-name {
+    font-size: 10px;
   }
   
-  /* Adjust team bar for swapped layout */
-  .team-bar-side.player-side {
-    align-items: flex-start;
-  }
-  
-  .team-bar-side.enemy-side {
-    align-items: flex-end;
+  .select-card-ability {
+    font-size: 8px;
+    padding: 2px 4px;
   }
 }
