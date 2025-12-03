@@ -30,28 +30,57 @@
   window.GachaApp = {
     getInventory: () => Array.from(state.inventory.values()),
     getGroups: () => state.groups.map(g => ({ name: g.name, rarity: g.rarity })),
-    // Expose method to calculate stats based on rarity
-    calculateStats: (rarity) => {
+    // Expose method to calculate stats based on rarity and group size
+    calculateStats: (rarity, imageCount = 1) => {
       // Get all groups with rarity > 0 to determine relative rarity
       const pool = state.groups.filter(g => g.images.length > 0 && g.rarity > 0);
       const totalRarity = pool.reduce((a, g) => a + g.rarity, 0);
       
       if (pool.length <= 1 || totalRarity <= 0) {
-        // Only one group or no valid groups - minimum stats
-        return { hp: 50, attack: 10 };
+        // Only one group or no valid groups - minimum stats with some variance
+        const variance = Math.min(imageCount, 10) / 10; // 0 to 1 based on image count
+        const hpVariance = Math.floor(Math.random() * (20 * variance));
+        const atkVariance = Math.floor(Math.random() * (5 * variance));
+        return { 
+          hp: 50 + hpVariance, 
+          attack: 10 + atkVariance 
+        };
       }
       
       // Calculate rarity ratio (0 = most common, 1 = rarest)
       // Lower rarity number = rarer = higher stats
       const rarityRatio = 1 - (rarity / totalRarity);
       
-      // Scale stats: rarer items get better stats
-      // HP: 50 (common) to 150 (rare)
-      // Attack: 10 (common) to 40 (rare)
-      const hp = Math.floor(50 + rarityRatio * 100);
-      const attack = Math.floor(10 + rarityRatio * 30);
+      // Image count bonus: more images = higher ceiling and variance
+      // Each image adds potential stats (diminishing returns after 10)
+      const imageBonus = Math.min(imageCount, 20) / 10; // 0.1 to 2.0
+      const varianceRange = 0.3 * imageBonus; // Up to 60% variance with 20 images
+      
+      // Base stats from rarity
+      // HP: 50 (common) to 150 (rare) base
+      // Attack: 10 (common) to 40 (rare) base
+      const baseHp = 50 + rarityRatio * 100;
+      const baseAtk = 10 + rarityRatio * 30;
+      
+      // Add ceiling bonus from image count
+      const ceilingBonus = imageBonus * 30; // Up to +60 HP ceiling with 20 images
+      const atkCeilingBonus = imageBonus * 10; // Up to +20 ATK ceiling
+      
+      // Apply random variance (can go above or below base)
+      const hpVariance = (Math.random() - 0.3) * varianceRange * baseHp; // Slightly biased upward
+      const atkVariance = (Math.random() - 0.3) * varianceRange * baseAtk;
+      
+      const hp = Math.floor(Math.max(30, baseHp + ceilingBonus * rarityRatio + hpVariance));
+      const attack = Math.floor(Math.max(5, baseAtk + atkCeilingBonus * rarityRatio + atkVariance));
       
       return { hp, attack };
+    },
+    // Notify listeners of inventory changes
+    onInventoryChange: null, // Will be set by game module
+    notifyInventoryChange: () => {
+      if (typeof window.GachaApp.onInventoryChange === 'function') {
+        window.GachaApp.onInventoryChange();
+      }
     },
   };
 
@@ -479,11 +508,12 @@
   };
 
   // Modal viewer
-  const openModal = (items, startIndex = 0, { preview = false } = {}) => {
+  const openModal = (items, startIndex = 0, { preview = false, inventoryItem = null } = {}) => {
     state.modal.items = items.slice();
     state.modal.index = Math.min(Math.max(0, startIndex), items.length - 1);
     state.modal.open = true;
     state.modal.dir = "next";
+    state.modal.inventoryItem = inventoryItem;
     refs.modal.classList.toggle("preview", preview);
     refs.modal.classList.remove("hidden");
     refs.modal.setAttribute("aria-hidden", "false");
@@ -514,6 +544,10 @@
     const i = state.modal.index;
     if (!items.length) return;
     const { group, img } = items[i];
+    
+    // Try to get inventory item for current image
+    const invItem = state.modal.inventoryItem || state.inventory.get(img.id);
+    
     const wasSrc = refs.modalImage.src;
     const willChange = !!wasSrc && wasSrc !== img.url;
     if (willChange) {
@@ -534,12 +568,60 @@
         refs.modalImage.classList.remove("fade-in", dirClass);
       }, { once: true });
       refs.modalThumbs.innerHTML = "";
+      
+      // Update stats display in modal
+      updateModalStats(invItem);
+      
       if (!preview) burstStars(20); // suppress effects for inventory preview
     };
     if (willChange) {
       refs.modalImage.addEventListener("animationend", applyNewImage, { once: true });
     } else {
       applyNewImage();
+    }
+  };
+
+  // New function to update modal stats display
+  const updateModalStats = (invItem) => {
+    let statsContainer = document.getElementById("modalStats");
+    if (!statsContainer) {
+      // Create stats container if it doesn't exist
+      const metaEl = refs.modal.querySelector(".viewer .meta");
+      if (metaEl) {
+        statsContainer = el("div", { id: "modalStats", class: "modal-stats" });
+        metaEl.after(statsContainer);
+      }
+    }
+    
+    if (statsContainer) {
+      if (invItem) {
+        const abilityInfo = window.Abilities?.getAbilityDisplay(invItem.ability) || { name: "None", desc: "No ability", color: "#666", icon: "❓" };
+        statsContainer.innerHTML = "";
+        statsContainer.append(
+          el("div", { class: "modal-stats-row" },
+            el("div", { class: "modal-stat hp" }, 
+              el("span", { class: "stat-icon" }, "❤️"),
+              el("span", { class: "stat-value" }, String(invItem.maxHp)),
+              el("span", { class: "stat-label" }, "HP")
+            ),
+            el("div", { class: "modal-stat atk" },
+              el("span", { class: "stat-icon" }, "⚔️"),
+              el("span", { class: "stat-value" }, String(invItem.attack)),
+              el("span", { class: "stat-label" }, "ATK")
+            )
+          ),
+          el("div", { class: "modal-ability", style: `border-color: ${abilityInfo.color}` },
+            el("div", { class: "ability-header" },
+              el("span", { class: "ability-icon" }, abilityInfo.icon),
+              el("span", { class: "ability-name", style: `color: ${abilityInfo.color}` }, abilityInfo.name)
+            ),
+            el("div", { class: "ability-desc" }, invItem.ability?.desc || "No special ability")
+          )
+        );
+        statsContainer.classList.remove("hidden");
+      } else {
+        statsContainer.classList.add("hidden");
+      }
     }
   };
 
@@ -590,8 +672,8 @@
       } else {
         // Clone the URL so inventory persists even if the original group/image is deleted
         const clonedUrl = await cloneImageUrl(img.url);
-        // Calculate permanent stats based on group rarity
-        const stats = window.GachaApp.calculateStats(group.rarity);
+        // Calculate permanent stats based on group rarity AND image count
+        const stats = window.GachaApp.calculateStats(group.rarity, group.images.length);
         // Assign a random ability
         const ability = window.Abilities?.getRandomAbility() || null;
         state.inventory.set(key, {
@@ -615,6 +697,7 @@
   const removeInventoryByImageId = (imgId) => {
     if (state.inventory.delete(imgId)) {
       renderInventory();
+      window.GachaApp.notifyInventoryChange();
     }
   };
   const updateInventoryTitle = (imgId, newTitle) => {
@@ -622,6 +705,7 @@
     if (it) {
       it.title = newTitle;
       renderInventory();
+      window.GachaApp.notifyInventoryChange();
     }
   };
 
@@ -635,24 +719,33 @@
       );
       return;
     }
-    let content;
-    if (list.length === 1) {
-      const it = list[0];
-      content = el("div", { class: "result-card", onclick: () => openModal([{ group:{name: it.groupName}, img:{ url: it.url, name: it.title, title: it.title, id: it.id } }], 0, { preview: true }) },
+    
+    const renderCard = (it) => {
+      const abilityInfo = window.Abilities?.getAbilityDisplay(it.ability) || { name: "None", desc: "", color: "#666", icon: "❓" };
+      
+      return el("div", { 
+        class: "result-card inv-card", 
+        onclick: () => openModal([{ group:{name: it.groupName}, img:{ url: it.url, name: it.title, title: it.title, id: it.id } }], 0, { preview: true, inventoryItem: it }) 
+      },
         el("img", { src: it.url, alt: it.title }),
         el("div", { class: "count-badge" }, `${it.count}x`),
+        el("div", { class: "stats-overlay" },
+          el("div", { class: "stat-pill hp" }, `❤️ ${it.maxHp}`),
+          el("div", { class: "stat-pill atk" }, `⚔️ ${it.attack}`)
+        ),
+        el("div", { class: "ability-overlay", style: `border-color: ${abilityInfo.color}` },
+          el("span", { class: "ability-icon" }, abilityInfo.icon),
+          el("span", { class: "ability-text", style: `color: ${abilityInfo.color}` }, abilityInfo.name)
+        ),
         el("div", { class: "meta" }, `${it.groupName} • ${it.title}`)
       );
+    };
+    
+    let content;
+    if (list.length === 1) {
+      content = renderCard(list[0]);
     } else {
-      content = el("div", { class: "grid" },
-        list.map(it =>
-          el("div", { class: "result-card", onclick: () => openModal([{ group:{name: it.groupName}, img:{ url: it.url, name: it.title, title: it.title, id: it.id } }], 0, { preview: true }) },
-            el("img", { src: it.url, alt: it.title }),
-            el("div", { class: "count-badge" }, `${it.count}x`),
-            el("div", { class: "meta" }, `${it.groupName} • ${it.title}`)
-          )
-        )
-      );
+      content = el("div", { class: "grid" }, list.map(renderCard));
     }
     refs.inventoryResults.append(content);
   };
@@ -669,6 +762,7 @@
     showResults(items);
     await addToInventory(items);
     renderInventory();
+    window.GachaApp.notifyInventoryChange();
     await playRollCinematic(items);
     openModal(items, 0);
   };
@@ -689,6 +783,7 @@
     showResults(results);
     await addToInventory(results);
     renderInventory();
+    window.GachaApp.notifyInventoryChange();
     await playRollCinematic(results);
     openModal(results, 0);
   };
@@ -704,23 +799,34 @@
   // Enhance results rendering: clicking a card opens modal at that index
   const showResults = (items) => {
     refs.results.innerHTML = "";
-    if (items.length === 1) {
-      const { group, img } = items[0];
+    
+    const renderResultCard = ({ group, img }, idx) => {
+      // Get the inventory item if it exists (for stats display)
+      const invItem = state.inventory.get(img.id);
+      const abilityInfo = invItem?.ability 
+        ? window.Abilities?.getAbilityDisplay(invItem.ability) 
+        : { name: "???", desc: "", color: "#666", icon: "❓" };
+      
       const card = el("div", { class: "result-card" },
         el("img", { src: img.url, alt: img.title || img.name }),
+        invItem ? el("div", { class: "stats-overlay" },
+          el("div", { class: "stat-pill hp" }, `❤️ ${invItem.maxHp}`),
+          el("div", { class: "stat-pill atk" }, `⚔️ ${invItem.attack}`)
+        ) : null,
+        invItem ? el("div", { class: "ability-overlay", style: `border-color: ${abilityInfo.color}` },
+          el("span", { class: "ability-icon" }, abilityInfo.icon),
+          el("span", { class: "ability-text", style: `color: ${abilityInfo.color}` }, abilityInfo.name)
+        ) : null,
         el("div", { class: "meta" }, `${group.name} • ${img.title || fileTitle(img.name)}`)
       );
-      card.addEventListener("click", () => openModal(items, 0));
-      refs.results.append(card);
+      card.addEventListener("click", () => openModal(items, idx, { inventoryItem: invItem }));
+      return card;
+    };
+    
+    if (items.length === 1) {
+      refs.results.append(renderResultCard(items[0], 0));
     } else {
-      const grid = el("div", { class: "grid" }, items.map(({ group, img }, idx) => {
-        const card = el("div", { class: "result-card" },
-          el("img", { src: img.url, alt: img.title || img.name }),
-          el("div", { class: "meta" }, `${group.name} • ${img.title || fileTitle(img.name)}`)
-        );
-        card.addEventListener("click", () => openModal(items, idx));
-        return card;
-      }));
+      const grid = el("div", { class: "grid" }, items.map((item, idx) => renderResultCard(item, idx)));
       refs.results.append(grid);
     }
   };
@@ -1107,6 +1213,7 @@
 
       render();
       renderInventory();
+      window.GachaApp.notifyInventoryChange();
       alert("Import completed.");
     } catch (err) {
       console.error(err);

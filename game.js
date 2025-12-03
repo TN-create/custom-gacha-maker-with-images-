@@ -49,6 +49,50 @@ const Game = (() => {
     if (playBtn) {
       playBtn.addEventListener('click', handlePlayClick);
     }
+    
+    // Listen for inventory changes
+    if (window.GachaApp) {
+      window.GachaApp.onInventoryChange = handleInventoryChange;
+    }
+  }
+
+  // Handle inventory changes - refresh selection UI if in select phase
+  function handleInventoryChange() {
+    if (phase === 'select') {
+      // Remember currently selected IDs
+      const selectedIds = new Set(playerTeam.map(c => c.id));
+      
+      // Re-render selection UI
+      const inventory = window.GachaApp?.getInventory() || [];
+      if (inventory.length === 0) {
+        playScreen.innerHTML = '<p class="play-placeholder">No items in inventory. Roll some first!</p>';
+        playerTeam = [];
+        playBtn.textContent = '🔒 Lock Team';
+        return;
+      }
+      
+      renderSelectionUI(inventory);
+      
+      // Restore selections for items that still exist
+      const grid = playScreen.querySelector('.select-grid');
+      const countEl = playScreen.querySelector('.select-count');
+      
+      // Clear and rebuild playerTeam with updated inventory data
+      playerTeam = [];
+      inventory.forEach(item => {
+        if (selectedIds.has(item.id)) {
+          const cardEl = grid?.querySelector(`[data-id="${item.id}"]`);
+          if (cardEl && playerTeam.length < 4) {
+            playerTeam.push({ ...item });
+            cardEl.classList.add('selected');
+          }
+        }
+      });
+      
+      if (countEl) {
+        countEl.textContent = `${playerTeam.length} / 4 selected`;
+      }
+    }
   }
 
   function handlePlayClick() {

@@ -356,9 +356,9 @@ html, body {
   opacity: 1;
   visibility: visible;
   transition: opacity .2s ease, visibility .2s ease;
-  overflow: visible;          /* allow burst particles to render outside dialog area */
-  padding: 12px;             /* keep breathing room on tiny screens */
-  scrollbar-gutter: stable;  /* stabilize layout */
+  overflow: auto;          /* allow modal backdrop to scroll if needed */
+  padding: 12px;
+  scrollbar-gutter: stable;
 }
 .modal.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
@@ -370,33 +370,56 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0,0,0,.5);
-  overflow: visible; /* let children overdraw (burst) */
+  overflow: hidden; /* contain the scrollable viewer */
   display: grid;
-  grid-template-rows: auto 1fr; /* header buttons + viewer */
+  grid-template-rows: auto 1fr;
 }
 
-/* Viewer area */
+/* Viewer area - make scrollable */
 .viewer {
   padding: 16px 16px 10px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  overflow: hidden;          /* prevent scrollbar during next/prev */
+  overflow-y: auto;          /* enable vertical scrolling */
+  overflow-x: hidden;
+  max-height: calc(92vh - 50px); /* account for close button area */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
-/* Canvas: driven by JS aspect-ratio but with viewport clamps */
+.viewer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.viewer::-webkit-scrollbar-track {
+  background: rgba(0,0,0,.2);
+  border-radius: 4px;
+}
+
+.viewer::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.viewer::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Canvas: adjust for scrollable context */
 .canvas {
   position: relative;
   width: 100%;
-  height: clamp(220px, 60vh, 540px);
+  min-height: clamp(220px, 50vh, 480px);
   max-width: 100%;
-  max-height: 70vh;
+  flex-shrink: 0;
   border-radius: 10px;
-  background: #141729; /* matches .result-card */
+  background: #141729;
   border: 1px solid var(--border);
   box-shadow: 0 6px 20px rgba(0,0,0,.35);
   display: grid;
   place-items: center;
-  overflow: visible; /* allow burst layer to escape */
+  overflow: visible;
   aspect-ratio: auto;
 }
 
@@ -901,18 +924,17 @@ html, body {
   .rc-skip { top:12px; right:14px; }
 }
 
-/* Mobile modal viewer: allow taller images & scrolling */
+/* Mobile modal viewer: adjust for scrolling */
 @media (max-width: 640px) {
   .modal-dialog {
     max-height: 96vh;
   }
   .viewer {
-    overflow-y: auto; /* allow scroll if tall image exceeds viewport */
+    max-height: calc(96vh - 40px);
+    padding: 12px 12px 8px;
   }
   .canvas {
-    height: auto;
-    min-height: clamp(260px, 75vh, 760px); /* expand vertical room for tall images */
-    max-height: 80vh;
+    min-height: clamp(200px, 45vh, 400px);
   }
 }
 
@@ -2034,5 +2056,207 @@ html, body {
   .select-card-ability {
     font-size: 8px;
     padding: 2px 4px;
+  }
+}
+
+/* Stats overlay on result cards */
+.result-card .stats-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+
+.stat-pill.hp {
+  background: rgba(255,93,108,.85);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255,93,108,.4);
+}
+
+.stat-pill.atk {
+  background: rgba(79,124,255,.85);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(79,124,255,.4);
+}
+
+/* Ability overlay on result cards */
+.result-card .ability-overlay {
+  position: absolute;
+  bottom: 36px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,.85), transparent);
+  border-top: 1px solid;
+  border-bottom: 1px solid;
+}
+
+.ability-overlay .ability-icon {
+  font-size: 12px;
+}
+
+.ability-overlay .ability-text {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Inventory card specific styling */
+.inv-card {
+  position: relative;
+}
+
+.inv-card .count-badge {
+  z-index: 5;
+}
+
+/* Modal stats display */
+.modal-stats {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0,0,0,.3);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.modal-stats.hidden {
+  display: none;
+}
+
+.modal-stats-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.modal-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+.modal-stat .stat-icon {
+  font-size: 18px;
+}
+
+.modal-stat .stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.modal-stat .stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-stat.hp {
+  border-color: rgba(255,93,108,.4);
+  background: rgba(255,93,108,.1);
+}
+
+.modal-stat.atk {
+  border-color: rgba(79,124,255,.4);
+  background: rgba(79,124,255,.1);
+}
+
+/* Modal ability display */
+.modal-ability {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid;
+}
+
+.modal-ability .ability-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.modal-ability .ability-icon {
+  font-size: 16px;
+}
+
+.modal-ability .ability-name {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.modal-ability .ability-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .stat-pill {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  
+  .ability-overlay .ability-text {
+    font-size: 9px;
+  }
+  
+  .modal-stats-row {
+    gap: 10px;
+  }
+  
+  .modal-stat {
+    padding: 6px 12px;
+  }
+  
+  .modal-stat .stat-value {
+    font-size: 16px;
+  }
+  
+  .modal-stat .stat-icon {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .result-card .stats-overlay {
+    top: 4px;
+    right: 4px;
+  }
+  
+  .stat-pill {
+    padding: 2px 5px;
+    font-size: 9px;
+    gap: 2px;
+  }
+  
+  .result-card .ability-overlay {
+    bottom: 32px;
+    padding: 3px 6px;
   }
 }
