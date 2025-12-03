@@ -484,10 +484,6 @@ html, body {
   transform: translateY(1px) scale(.98);
 }
 
-/* Image switch animations */
-.canvas img {
-  /* ...existing code... */
-}
 .canvas img.fade-out {
   animation: imgFadeOut .18s ease both;
 }
@@ -1011,3 +1007,33 @@ html, body {
   animation: spin .9s linear infinite;
 }
 .busy-text { color: var(--text); font-size: 14px; }
+
+/* Play section */
+.play-screen {
+  min-height: 280px;
+  background: #0e1120;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 12px 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.play-placeholder {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+.play-controls {
+  margin-top: 8px;
+}
+.play-controls .btn {
+  min-width: 120px;
+}
+
+@media (max-width: 640px) {
+  .play-screen {
+    min-height: 220px;
+  }
+}
