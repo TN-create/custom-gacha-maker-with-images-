@@ -596,24 +596,27 @@
     if (statsContainer) {
       if (invItem) {
         const abilityInfo = window.Abilities?.getAbilityDisplay(invItem.ability) || { name: "None", desc: "No ability", color: "#666", icon: "❓" };
+        const abilityType = invItem.ability?.type || "unknown";
+        
         statsContainer.innerHTML = "";
         statsContainer.append(
           el("div", { class: "modal-stats-row" },
             el("div", { class: "modal-stat hp" }, 
               el("span", { class: "stat-icon" }, "❤️"),
               el("span", { class: "stat-value" }, String(invItem.maxHp)),
-              el("span", { class: "stat-label" }, "HP")
+              el("span", { class: "stat-label" }, "Health")
             ),
             el("div", { class: "modal-stat atk" },
               el("span", { class: "stat-icon" }, "⚔️"),
               el("span", { class: "stat-value" }, String(invItem.attack)),
-              el("span", { class: "stat-label" }, "ATK")
+              el("span", { class: "stat-label" }, "Attack")
             )
           ),
-          el("div", { class: "modal-ability", style: `border-color: ${abilityInfo.color}` },
+          el("div", { class: "modal-ability", style: `border-color: ${abilityInfo.color}; color: ${abilityInfo.color}` },
             el("div", { class: "ability-header" },
               el("span", { class: "ability-icon" }, abilityInfo.icon),
-              el("span", { class: "ability-name", style: `color: ${abilityInfo.color}` }, abilityInfo.name)
+              el("span", { class: "ability-name", style: `color: ${abilityInfo.color}` }, abilityInfo.name),
+              el("span", { class: "ability-type-badge", style: `color: ${abilityInfo.color}; border-color: ${abilityInfo.color}` }, abilityType)
             ),
             el("div", { class: "ability-desc" }, invItem.ability?.desc || "No special ability")
           )

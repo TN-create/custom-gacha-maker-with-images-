@@ -378,6 +378,554 @@ html, body {
   grid-template-rows: auto 1fr;
 }
 
+/* ===== ENHANCED MODAL STATS DISPLAY ===== */
+.modal-stats {
+  margin-top: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.modal-stats.hidden {
+  display: none;
+}
+
+/* Stats row with glass morphism */
+.modal-stats-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.modal-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 24px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  min-width: 100px;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.modal-stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  opacity: 0.5;
+}
+
+.modal-stat:hover {
+  transform: translateY(-2px);
+}
+
+.modal-stat .stat-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.3));
+  animation: statIconFloat 3s ease-in-out infinite;
+}
+
+@keyframes statIconFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.modal-stat .stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+}
+
+.modal-stat .stat-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+}
+
+.modal-stat.hp {
+  border-color: rgba(255,93,108,.4);
+  background: linear-gradient(145deg, rgba(255,93,108,.15), rgba(255,93,108,.05));
+  box-shadow: 0 4px 20px rgba(255,93,108,.2), inset 0 1px 0 rgba(255,255,255,.1);
+  color: #ff5d6c;
+}
+
+.modal-stat.hp:hover {
+  box-shadow: 0 8px 30px rgba(255,93,108,.3), inset 0 1px 0 rgba(255,255,255,.15);
+}
+
+.modal-stat.atk {
+  border-color: rgba(79,124,255,.4);
+  background: linear-gradient(145deg, rgba(79,124,255,.15), rgba(79,124,255,.05));
+  box-shadow: 0 4px 20px rgba(79,124,255,.2), inset 0 1px 0 rgba(255,255,255,.1);
+  color: #4f7cff;
+}
+
+.modal-stat.atk:hover {
+  box-shadow: 0 8px 30px rgba(79,124,255,.3), inset 0 1px 0 rgba(255,255,255,.15);
+}
+
+/* Enhanced ability display in modal */
+.modal-ability {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(0,0,0,.4), rgba(0,0,0,.2));
+  border: 2px solid;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.modal-ability::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, rgba(255,255,255,.1), transparent, rgba(255,255,255,.05), transparent);
+  animation: abilityShine 8s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes abilityShine {
+  to { transform: rotate(360deg); }
+}
+
+.modal-ability:hover {
+  transform: scale(1.02);
+}
+
+.modal-ability .ability-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.modal-ability .ability-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.4));
+  animation: abilityIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes abilityIconPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.modal-ability .ability-name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0,0,0,.3);
+}
+
+.modal-ability .ability-type-badge {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+}
+
+.modal-ability .ability-desc {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  position: relative;
+  z-index: 1;
+  padding: 12px;
+  background: rgba(0,0,0,.2);
+  border-radius: 10px;
+  border-left: 3px solid currentColor;
+}
+
+/* Ability type-specific glow effects */
+.modal-ability[style*="ff6b6b"] {
+  box-shadow: 0 4px 20px rgba(255,107,107,.25), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.modal-ability[style*="4ecdc4"] {
+  box-shadow: 0 4px 20px rgba(78,205,196,.25), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.modal-ability[style*="ffe66d"] {
+  box-shadow: 0 4px 20px rgba(255,230,109,.25), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.modal-ability[style*="a855f7"] {
+  box-shadow: 0 4px 20px rgba(168,85,247,.25), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.modal-ability[style*="f97316"] {
+  box-shadow: 0 4px 20px rgba(249,115,22,.25), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+/* ===== BATTLE ABILITY ACTIVATION EFFECTS ===== */
+
+/* Ability trigger flash effect */
+.ability-trigger-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.ability-trigger-effect.offensive {
+  animation: abilityFlashOffensive .6s ease-out forwards;
+}
+
+.ability-trigger-effect.defensive {
+  animation: abilityFlashDefensive .6s ease-out forwards;
+}
+
+.ability-trigger-effect.utility {
+  animation: abilityFlashUtility .6s ease-out forwards;
+}
+
+.ability-trigger-effect.debuff {
+  animation: abilityFlashDebuff .6s ease-out forwards;
+}
+
+.ability-trigger-effect.special {
+  animation: abilityFlashSpecial .8s ease-out forwards;
+}
+
+@keyframes abilityFlashOffensive {
+  0% { box-shadow: inset 0 0 0 0 rgba(255,107,107,0); }
+  30% { box-shadow: inset 0 0 60px 20px rgba(255,107,107,.6); }
+  100% { box-shadow: inset 0 0 0 0 rgba(255,107,107,0); }
+}
+
+@keyframes abilityFlashDefensive {
+  0% { box-shadow: inset 0 0 0 0 rgba(78,205,196,0); }
+  30% { box-shadow: inset 0 0 60px 20px rgba(78,205,196,.6); }
+  100% { box-shadow: inset 0 0 0 0 rgba(78,205,196,0); }
+}
+
+@keyframes abilityFlashUtility {
+  0% { box-shadow: inset 0 0 0 0 rgba(255,230,109,0); }
+  30% { box-shadow: inset 0 0 60px 20px rgba(255,230,109,.6); }
+  100% { box-shadow: inset 0 0 0 0 rgba(255,230,109,0); }
+}
+
+@keyframes abilityFlashDebuff {
+  0% { box-shadow: inset 0 0 0 0 rgba(168,85,247,0); }
+  30% { box-shadow: inset 0 0 60px 20px rgba(168,85,247,.6); }
+  100% { box-shadow: inset 0 0 0 0 rgba(168,85,247,0); }
+}
+
+@keyframes abilityFlashSpecial {
+  0% { 
+    box-shadow: inset 0 0 0 0 rgba(249,115,22,0);
+    filter: brightness(1);
+  }
+  20% { 
+    box-shadow: inset 0 0 80px 30px rgba(249,115,22,.7);
+    filter: brightness(1.3);
+  }
+  100% { 
+    box-shadow: inset 0 0 0 0 rgba(249,115,22,0);
+    filter: brightness(1);
+  }
+}
+
+/* Ability name popup */
+.ability-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  z-index: 101;
+  pointer-events: none;
+  animation: abilityPopup 1.2s ease-out forwards;
+}
+
+.ability-popup.offensive {
+  background: linear-gradient(135deg, rgba(255,107,107,.9), rgba(200,60,60,.9));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255,107,107,.5), 0 0 40px rgba(255,107,107,.3);
+  border: 1px solid rgba(255,255,255,.3);
+}
+
+.ability-popup.defensive {
+  background: linear-gradient(135deg, rgba(78,205,196,.9), rgba(40,150,145,.9));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(78,205,196,.5), 0 0 40px rgba(78,205,196,.3);
+  border: 1px solid rgba(255,255,255,.3);
+}
+
+.ability-popup.utility {
+  background: linear-gradient(135deg, rgba(255,230,109,.9), rgba(200,180,50,.9));
+  color: #1a1a1a;
+  box-shadow: 0 4px 20px rgba(255,230,109,.5), 0 0 40px rgba(255,230,109,.3);
+  border: 1px solid rgba(255,255,255,.3);
+}
+
+.ability-popup.debuff {
+  background: linear-gradient(135deg, rgba(168,85,247,.9), rgba(120,50,200,.9));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(168,85,247,.5), 0 0 40px rgba(168,85,247,.3);
+  border: 1px solid rgba(255,255,255,.3);
+}
+
+.ability-popup.special {
+  background: linear-gradient(135deg, rgba(249,115,22,.9), rgba(200,80,10,.9));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(249,115,22,.5), 0 0 40px rgba(249,115,22,.3);
+  border: 1px solid rgba(255,255,255,.3);
+}
+
+@keyframes abilityPopup {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -80%) scale(0.8);
+  }
+}
+
+/* Dodge effect */
+.dodge-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: dodgeGhost .5s ease-out forwards;
+}
+
+@keyframes dodgeGhost {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(50px);
+    filter: blur(8px);
+  }
+}
+
+/* Buff received effect */
+.buff-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 3px solid transparent;
+  border-radius: inherit;
+  animation: buffPulse 1s ease-out forwards;
+}
+
+.buff-effect.attack {
+  border-color: rgba(255,107,107,.8);
+  box-shadow: 0 0 20px rgba(255,107,107,.5);
+}
+
+.buff-effect.defense {
+  border-color: rgba(78,205,196,.8);
+  box-shadow: 0 0 20px rgba(78,205,196,.5);
+}
+
+.buff-effect.heal {
+  border-color: rgba(47,191,113,.8);
+  box-shadow: 0 0 20px rgba(47,191,113,.5);
+}
+
+@keyframes buffPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+/* Ability disabled/stolen effect */
+.ability-stolen-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(45deg, transparent 40%, rgba(168,85,247,.3) 50%, transparent 60%);
+  background-size: 200% 200%;
+  animation: stealSweep .8s ease-out forwards;
+}
+
+@keyframes stealSweep {
+  0% { background-position: 200% 0; opacity: 1; }
+  100% { background-position: -100% 0; opacity: 0; }
+}
+
+.ability-disabled-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px;
+  background: rgba(100,100,100,.9);
+  color: #aaa;
+  font-size: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: disabledFlash 2s ease-in-out infinite;
+}
+
+@keyframes disabledFlash {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Critical hit effect enhancement */
+.critical-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.critical-effect::before {
+  content: '💥';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  animation: criticalBurst .6s ease-out forwards;
+}
+
+@keyframes criticalBurst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2);
+  }
+}
+
+/* Responsive modal stats */
+@media (max-width: 640px) {
+  .modal-stats-row {
+    gap: 12px;
+  }
+  
+  .modal-stat {
+    padding: 12px 18px;
+    min-width: 80px;
+  }
+  
+  .modal-stat .stat-icon {
+    font-size: 22px;
+  }
+  
+  .modal-stat .stat-value {
+    font-size: 24px;
+  }
+  
+  .modal-ability {
+    padding: 12px 16px;
+  }
+  
+  .modal-ability .ability-icon {
+    font-size: 20px;
+  }
+  
+  .modal-ability .ability-name {
+    font-size: 15px;
+  }
+  
+  .modal-ability .ability-desc {
+    font-size: 12px;
+    padding: 10px;
+  }
+}
+
+/* General modal styles */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.82);
+  display: grid;
+  place-items: center;
+  z-index: 10000;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .2s ease, visibility .2s ease;
+  overflow: auto;          /* allow modal backdrop to scroll if needed */
+  padding: 12px;
+  scrollbar-gutter: stable;
+}
+.modal.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.modal-dialog {
+  position: relative;
+  width: min(900px, 96vw);
+  max-height: 92vh;
+  background: #141729;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  overflow: hidden; /* contain the scrollable viewer */
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
 /* Viewer area - make scrollable */
 .viewer {
   padding: 16px 16px 10px;
