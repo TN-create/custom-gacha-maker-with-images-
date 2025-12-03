@@ -23,10 +23,25 @@ const Game = (() => {
       ability: card.ability || null,
       abilityUses: {},
       damageMultiplier: 1,
+      // Turn manipulation state
+      turnCount: 0,
+      skipTurnsRemaining: 0,
+      extraAttacksRemaining: 0,
+      storedAttacks: 0,
+      inBurstMode: false,
+      burstCooldownRemaining: 0,
+      perpetualActive: false,
     };
     // Apply passive ability modifiers
     if (window.Abilities && fighter.ability) {
       window.Abilities.applyPassiveModifiers(fighter);
+    }
+    // Check for initial skip turns
+    if (fighter.ability?.modifier?.skipTurns) {
+      fighter.skipTurnsRemaining = fighter.ability.modifier.skipTurns;
+    }
+    if (fighter.ability?.modifier?.bideSkipTurns) {
+      fighter.skipTurnsRemaining = fighter.ability.modifier.bideSkipTurns;
     }
     return fighter;
   };
@@ -403,6 +418,144 @@ const Game = (() => {
     setTimeout(() => card.classList.remove('attacking'), 400);
   }
 
+  // Calculate number of attacks for this turn based on turn manipulation abilities
+  function calculateAttacksThisTurn(fighter) {
+    const mod = fighter.ability?.modifier;
+    if (!mod) return 1;
+    
+    fighter.turnCount = (fighter.turnCount || 0) + 1;
+    
+    // Check if should skip this turn
+    if (fighter.skipTurnsRemaining > 0) {
+      fighter.skipTurnsRemaining--;
+      // Heal on skip if applicable
+      if (mod.healOnSkip && fighter.hp > 0) {
+        const heal = Math.floor(fighter.maxHp * mod.healOnSkip);
+        fighter.hp = Math.min(fighter.maxHp, fighter.hp + heal);
+        return { attacks: 0, effects: [`Meditating... Heal +${heal}`] };
+      }
+      // Bide damage multiplier when skip ends
+      if (mod.bideDamageMulti && fighter.skipTurnsRemaining === 0) {
+        fighter.damageMultiplier = (fighter.damageMultiplier || 1) * mod.bideDamageMulti;
+        return { attacks: 0, effects: ["Biding power..."] };
+      }
+      return { attacks: 0, effects: ["Charging up..."] };
+    }
+    
+    // Burst cooldown
+    if (fighter.burstCooldownRemaining > 0) {
+      fighter.burstCooldownRemaining--;
+      return { attacks: 0, effects: ["Recovering from burst..."] };
+    }
+    
+    // Attack every N turns
+    if (mod.attackEveryNTurns) {
+      if (fighter.turnCount % mod.attackEveryNTurns !== 0) {
+        return { attacks: 0, effects: ["Preparing heavy strike..."] };
+      }
+      fighter.damageMultiplier = (fighter.damageMultiplier || 1) * (mod.damageMultiplier || 1);
+    }
+    
+    // Skip every other turn with damage reduction
+    if (mod.skipEveryOther && fighter.turnCount % 2 === 0) {
+      return { attacks: 0, effects: ["Temporal Shield active"] };
+    }
+    
+    // Skip every N turns
+    if (mod.skipEveryN && fighter.turnCount % mod.skipEveryN === 0) {
+      if (mod.healOnSkip) {
+        const heal = Math.floor(fighter.maxHp * mod.healOnSkip);
+        fighter.hp = Math.min(fighter.maxHp, fighter.hp + heal);
+        return { attacks: 0, effects: [`Meditation +${heal} HP`] };
+      }
+      return { attacks: 0, effects: ["Skipping turn..."] };
+    }
+    
+    // Rhythm pattern
+    if (mod.rhythmPattern) {
+      const patternIndex = (fighter.turnCount - 1) % mod.rhythmPattern.length;
+      return { attacks: mod.rhythmPattern[patternIndex], effects: [] };
+    }
+    
+    // Perpetual motion
+    if (mod.perpetualAfter && fighter.turnCount >= mod.perpetualAfter) {
+      fighter.perpetualActive = true;
+    }
+    if (fighter.perpetualActive && mod.perpetualAttacks) {
+      return { attacks: mod.perpetualAttacks, effects: ["Perpetual Motion!"] };
+    }
+    
+    // Charging strike
+    if (mod.chargeEveryN && fighter.turnCount % mod.chargeEveryN === 0) {
+      return { attacks: mod.multiAttack || 3, effects: ["Charging Strike!"] };
+    }
+    
+    // Double attack after skip
+    if (mod.doubleAttackAfter && fighter.skipTurnsRemaining === 0) {
+      return { attacks: 2, effects: [] };
+    }
+    
+    // Burst mode
+    if (mod.burstAttacks && !fighter.inBurstMode) {
+      fighter.inBurstMode = true;
+      fighter.burstCooldownRemaining = mod.burstCooldown || 0;
+      return { attacks: mod.burstAttacks, effects: ["Overcharge!"] };
+    }
+    
+    // Stored attacks release
+    if (mod.storeAttacks) {
+      fighter.storedAttacks++;
+      if (fighter.storedAttacks >= mod.storeAttacks) {
+        const attacks = fighter.storedAttacks;
+        fighter.storedAttacks = 0;
+        fighter.damageMultiplier = (fighter.damageMultiplier || 1) * (mod.releaseMulti || 1);
+        return { attacks, effects: ["Delayed Blast!"] };
+      }
+      return { attacks: 0, effects: [`Storing attack (${fighter.storedAttacks}/${mod.storeAttacks})`] };
+    }
+    
+    return { attacks: 1, effects: [] };
+  }
+
+  // Check for extra turn after attack
+  function checkExtraTurn(fighter) {
+    const mod = fighter.ability?.modifier;
+    if (!mod) return { extraTurn: false, effects: [] };
+    
+    // Extra turn first round
+    if (mod.extraTurnFirstRound && fighter.turnCount === 1) {
+      return { extraTurn: true, effects: ["Haste!"] };
+    }
+    
+    // Chance for extra turn
+    if (mod.extraTurnChance && Math.random() < mod.extraTurnChance) {
+      return { extraTurn: true, effects: ["Extra Turn!"] };
+    }
+    
+    // Instant reattack chance
+    if (mod.instantReattackChance && Math.random() < mod.instantReattackChance) {
+      return { extraTurn: true, effects: ["Quick Reflexes!"] };
+    }
+    
+    // Chain attack chance
+    if (mod.chainAttackChance && Math.random() < mod.chainAttackChance) {
+      return { extraTurn: true, effects: ["Chain Attack!"] };
+    }
+    
+    return { extraTurn: false, effects: [] };
+  }
+
+  // Check if this fighter should steal enemy's turn
+  function checkStealTurn(fighter) {
+    const mod = fighter.ability?.modifier;
+    if (!mod) return false;
+    
+    if (mod.stealTurnChance && Math.random() < mod.stealTurnChance) {
+      return true;
+    }
+    return false;
+  }
+
   async function runBattle() {
     await delay(500);
     addLog('⚔️ Battle begins!');
@@ -441,37 +594,49 @@ const Game = (() => {
       const enemyTurnEffects = window.Abilities?.processTurnEffects(enemyFighter, {}) || [];
       enemyTurnEffects.forEach(e => addLog(`${enemyFighter.title}: ${e}`));
 
+      // Calculate player attacks this turn
+      const playerTurnInfo = calculateAttacksThisTurn(playerFighter);
+      playerTurnInfo.effects.forEach(e => addLog(`${playerFighter.title}: ${e}`));
+      
       // Player attacks
-      await delay(800);
-      showAttackAnimation(playerFighter.id, false);
-      await delay(200);
-      
-      let baseDamage = playerFighter.attack + Math.floor(Math.random() * 10) - 5;
-      baseDamage = Math.floor(baseDamage * (playerFighter.damageMultiplier || 1));
-      
-      const attackResult = window.Abilities?.calculateDamage(playerFighter, enemyFighter, baseDamage, {}) 
-        || { damage: Math.max(1, baseDamage), effects: [] };
-      
-      if (attackResult.dodged || attackResult.blocked) {
-        addLog(`${playerFighter.title} attacks but ${enemyFighter.title} ${attackResult.effects.join(' ')}`);
-      } else {
-        enemyFighter.hp -= attackResult.damage;
+      for (let i = 0; i < playerTurnInfo.attacks; i++) {
+        if (enemyFighter.hp <= 0) break;
         
-        // Check for fatal damage survival
-        if (enemyFighter.hp <= 0) {
-          const survival = window.Abilities?.checkFatalDamage(enemyFighter, attackResult.damage);
-          if (survival?.survives) {
-            enemyFighter.hp = survival.newHp;
-            attackResult.effects.push(survival.effect);
+        await delay(800);
+        showAttackAnimation(playerFighter.id, false);
+        await delay(200);
+        
+        let baseDamage = playerFighter.attack + Math.floor(Math.random() * 10) - 5;
+        baseDamage = Math.floor(baseDamage * (playerFighter.damageMultiplier || 1));
+        
+        const attackResult = window.Abilities?.calculateDamage(playerFighter, enemyFighter, baseDamage, {}) 
+          || { damage: Math.max(1, baseDamage), effects: [] };
+        
+        if (attackResult.dodged || attackResult.blocked) {
+          addLog(`${playerFighter.title} attacks but ${enemyFighter.title} ${attackResult.effects.join(' ')}`);
+        } else {
+          enemyFighter.hp -= attackResult.damage;
+          
+          // Check for fatal damage survival
+          if (enemyFighter.hp <= 0) {
+            const survival = window.Abilities?.checkFatalDamage(enemyFighter, attackResult.damage);
+            if (survival?.survives) {
+              enemyFighter.hp = survival.newHp;
+              attackResult.effects.push(survival.effect);
+            }
           }
+          
+          showDamage(enemyFighter.id, attackResult.damage, true);
+          const effectStr = attackResult.effects.length ? ` (${attackResult.effects.join(', ')})` : '';
+          const attackNum = playerTurnInfo.attacks > 1 ? ` [${i+1}/${playerTurnInfo.attacks}]` : '';
+          addLog(`⚔️ ${playerFighter.title} strikes ${enemyFighter.title} for <strong>${attackResult.damage}</strong> damage!${effectStr}${attackNum}`);
         }
         
-        showDamage(enemyFighter.id, attackResult.damage, true);
-        const effectStr = attackResult.effects.length ? ` (${attackResult.effects.join(', ')})` : '';
-        addLog(`⚔️ ${playerFighter.title} strikes ${enemyFighter.title} for <strong>${attackResult.damage}</strong> damage!${effectStr}`);
+        updateBattleCards();
       }
       
-      updateBattleCards();
+      // Reset damage multiplier after turn
+      playerFighter.damageMultiplier = 1;
 
       if (enemyFighter.hp <= 0) {
         // Check for revival
@@ -487,37 +652,67 @@ const Game = (() => {
         }
       }
 
+      // Check for player extra turn
+      const extraTurnCheck = checkExtraTurn(playerFighter);
+      if (extraTurnCheck.extraTurn && enemyFighter.hp > 0) {
+        extraTurnCheck.effects.forEach(e => addLog(`${playerFighter.title}: ${e}`));
+        continue; // Skip enemy turn
+      }
+
+      // Check if player steals enemy turn
+      if (checkStealTurn(playerFighter) && enemyFighter.hp > 0) {
+        addLog(`${playerFighter.title} steals ${enemyFighter.title}'s turn!`);
+        continue;
+      }
+
+      // Calculate enemy attacks this turn
+      const enemyTurnInfo = calculateAttacksThisTurn(enemyFighter);
+      enemyTurnInfo.effects.forEach(e => addLog(`${enemyFighter.title}: ${e}`));
+
       // Enemy attacks
-      await delay(800);
-      showAttackAnimation(enemyFighter.id, true);
-      await delay(200);
-      
-      let enemyBaseDamage = enemyFighter.attack + Math.floor(Math.random() * 10) - 5;
-      enemyBaseDamage = Math.floor(enemyBaseDamage * (enemyFighter.damageMultiplier || 1));
-      
-      const enemyAttackResult = window.Abilities?.calculateDamage(enemyFighter, playerFighter, enemyBaseDamage, {}) 
-        || { damage: Math.max(1, enemyBaseDamage), effects: [] };
-      
-      if (enemyAttackResult.dodged || enemyAttackResult.blocked) {
-        addLog(`${enemyFighter.title} attacks but ${playerFighter.title} ${enemyAttackResult.effects.join(' ')}`);
-      } else {
-        playerFighter.hp -= enemyAttackResult.damage;
+      for (let i = 0; i < enemyTurnInfo.attacks; i++) {
+        if (playerFighter.hp <= 0) break;
         
-        // Check for fatal damage survival
-        if (playerFighter.hp <= 0) {
-          const survival = window.Abilities?.checkFatalDamage(playerFighter, enemyAttackResult.damage);
-          if (survival?.survives) {
-            playerFighter.hp = survival.newHp;
-            enemyAttackResult.effects.push(survival.effect);
-          }
+        await delay(800);
+        showAttackAnimation(enemyFighter.id, true);
+        await delay(200);
+        
+        let enemyBaseDamage = enemyFighter.attack + Math.floor(Math.random() * 10) - 5;
+        enemyBaseDamage = Math.floor(enemyBaseDamage * (enemyFighter.damageMultiplier || 1));
+        
+        // Apply temporal shield damage reduction
+        if (enemyFighter.ability?.modifier?.skipEveryOther) {
+          enemyBaseDamage = Math.floor(enemyBaseDamage * (1 - (enemyFighter.ability.modifier.damageReduction || 0)));
         }
         
-        showDamage(playerFighter.id, enemyAttackResult.damage, false);
-        const effectStr = enemyAttackResult.effects.length ? ` (${enemyAttackResult.effects.join(', ')})` : '';
-        addLog(`🔥 ${enemyFighter.title} attacks ${playerFighter.title} for <strong>${enemyAttackResult.damage}</strong> damage!${effectStr}`);
+        const enemyAttackResult = window.Abilities?.calculateDamage(enemyFighter, playerFighter, enemyBaseDamage, {}) 
+          || { damage: Math.max(1, enemyBaseDamage), effects: [] };
+        
+        if (enemyAttackResult.dodged || enemyAttackResult.blocked) {
+          addLog(`${enemyFighter.title} attacks but ${playerFighter.title} ${enemyAttackResult.effects.join(' ')}`);
+        } else {
+          playerFighter.hp -= enemyAttackResult.damage;
+          
+          // Check for fatal damage survival
+          if (playerFighter.hp <= 0) {
+            const survival = window.Abilities?.checkFatalDamage(playerFighter, enemyAttackResult.damage);
+            if (survival?.survives) {
+              playerFighter.hp = survival.newHp;
+              enemyAttackResult.effects.push(survival.effect);
+            }
+          }
+          
+          showDamage(playerFighter.id, enemyAttackResult.damage, false);
+          const effectStr = enemyAttackResult.effects.length ? ` (${enemyAttackResult.effects.join(', ')})` : '';
+          const attackNum = enemyTurnInfo.attacks > 1 ? ` [${i+1}/${enemyTurnInfo.attacks}]` : '';
+          addLog(`🔥 ${enemyFighter.title} attacks ${playerFighter.title} for <strong>${enemyAttackResult.damage}</strong> damage!${effectStr}${attackNum}`);
+        }
+        
+        updateBattleCards();
       }
       
-      updateBattleCards();
+      // Reset damage multiplier after turn
+      enemyFighter.damageMultiplier = 1;
 
       if (playerFighter.hp <= 0) {
         // Check for revival
@@ -529,6 +724,29 @@ const Game = (() => {
         } else {
           await delay(500);
           addLog(`💥 ${playerFighter.title} has fallen!`);
+        }
+      }
+
+      // Check for enemy extra turn
+      const enemyExtraTurn = checkExtraTurn(enemyFighter);
+      if (enemyExtraTurn.extraTurn && playerFighter.hp > 0) {
+        enemyExtraTurn.effects.forEach(e => addLog(`${enemyFighter.title}: ${e}`));
+        // Enemy gets extra attack
+        await delay(600);
+        const extraAttackInfo = { attacks: 1, effects: [] };
+        for (let i = 0; i < extraAttackInfo.attacks; i++) {
+          if (playerFighter.hp <= 0) break;
+          showAttackAnimation(enemyFighter.id, true);
+          await delay(200);
+          let extraDamage = enemyFighter.attack + Math.floor(Math.random() * 10) - 5;
+          const extraResult = window.Abilities?.calculateDamage(enemyFighter, playerFighter, extraDamage, {}) 
+            || { damage: Math.max(1, extraDamage), effects: [] };
+          if (!extraResult.dodged && !extraResult.blocked) {
+            playerFighter.hp -= extraResult.damage;
+            showDamage(playerFighter.id, extraResult.damage, false);
+            addLog(`🔥 ${enemyFighter.title} extra attack for <strong>${extraResult.damage}</strong>!`);
+          }
+          updateBattleCards();
         }
       }
     }

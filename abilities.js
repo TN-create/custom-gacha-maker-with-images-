@@ -125,6 +125,23 @@ const Abilities = (() => {
     { id: 108, name: "Time Stop", desc: "Get 2 free attacks at battle start", type: "special", trigger: "battleStart", modifier: { freeAttacks: 2 } },
     { id: 109, name: "Dimension Shift", desc: "Swap HP with enemy once", type: "special", trigger: "active", modifier: { hpSwap: true } },
     { id: 110, name: "Absolute Zero", desc: "Freeze all enemies for 1 turn", type: "special", trigger: "battleStart", modifier: { massFreeze: 1 } },
+
+    // === TURN MANIPULATION ABILITIES (111-125) ===
+    { id: 111, name: "Heavy Hitter", desc: "Attack every 2 turns, but deal 2.5x damage", type: "utility", trigger: "turnManipulation", modifier: { attackEveryNTurns: 2, damageMultiplier: 2.5 } },
+    { id: 112, name: "Flurry", desc: "50% chance to gain an extra turn after attacking", type: "utility", trigger: "turnManipulation", modifier: { extraTurnChance: 0.5 } },
+    { id: 113, name: "Haste", desc: "Always get an extra turn on first round", type: "utility", trigger: "turnManipulation", modifier: { extraTurnFirstRound: true } },
+    { id: 114, name: "Slow Starter", desc: "Skip first 2 turns, then attack twice per turn", type: "utility", trigger: "turnManipulation", modifier: { skipTurns: 2, doubleAttackAfter: true } },
+    { id: 115, name: "Charging Strike", desc: "Every 3rd turn, attack 3 times", type: "utility", trigger: "turnManipulation", modifier: { chargeEveryN: 3, multiAttack: 3 } },
+    { id: 116, name: "Quick Reflexes", desc: "30% chance to attack again immediately", type: "utility", trigger: "turnManipulation", modifier: { instantReattackChance: 0.3 } },
+    { id: 117, name: "Temporal Shield", desc: "Skip every other turn, take 50% less damage", type: "utility", trigger: "turnManipulation", modifier: { skipEveryOther: true, damageReduction: 0.5 } },
+    { id: 118, name: "Bide", desc: "Skip 3 turns, then deal 5x damage on next attack", type: "utility", trigger: "turnManipulation", modifier: { bideSkipTurns: 3, bideDamageMulti: 5 } },
+    { id: 119, name: "Endless Assault", desc: "Each consecutive attack has 25% chance for another", type: "utility", trigger: "turnManipulation", modifier: { chainAttackChance: 0.25 } },
+    { id: 120, name: "Meditation", desc: "Every 4th turn is skipped but heal 20% HP", type: "utility", trigger: "turnManipulation", modifier: { skipEveryN: 4, healOnSkip: 0.2 } },
+    { id: 121, name: "Overcharge", desc: "Attack 3 times, then skip 2 turns", type: "utility", trigger: "turnManipulation", modifier: { burstAttacks: 3, burstCooldown: 2 } },
+    { id: 122, name: "Time Thief", desc: "20% chance to steal enemy's next turn", type: "utility", trigger: "turnManipulation", modifier: { stealTurnChance: 0.2 } },
+    { id: 123, name: "Delayed Blast", desc: "Store attacks for 2 turns, release all at once (3x)", type: "utility", trigger: "turnManipulation", modifier: { storeAttacks: 2, releaseMulti: 3 } },
+    { id: 124, name: "Rhythm", desc: "Alternate between 0 and 2 attacks each turn", type: "utility", trigger: "turnManipulation", modifier: { rhythmPattern: [0, 2] } },
+    { id: 125, name: "Perpetual Motion", desc: "After 5 turns, always attack twice", type: "utility", trigger: "turnManipulation", modifier: { perpetualAfter: 5, perpetualAttacks: 2 } },
   ];
 
   // Get a random ability

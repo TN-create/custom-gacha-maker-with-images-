@@ -242,10 +242,11 @@ html, body {
 }
 .results .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
 }
 .result-card {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
@@ -254,7 +255,7 @@ html, body {
 }
 .result-card img {
   width: 100%;
-  height: 120px;
+  height: 140px;
   object-fit: cover;
   display: block;
 }
@@ -262,8 +263,10 @@ html, body {
   padding: 8px;
   font-size: 12px;
   color: var(--muted);
+  background: #141729;
+  position: relative;
+  z-index: 2;
 }
-@keyframes pop { from { transform: scale(.96); opacity: 0 } to { transform: scale(1); opacity: 1 } }
 
 /* Overlay animation */
 .overlay {
@@ -2059,63 +2062,69 @@ html, body {
   }
 }
 
-/* Stats overlay on result cards */
+/* Stats overlay on result cards - fixed positioning */
 .result-card .stats-overlay {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  z-index: 3;
 }
 
 .stat-pill {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
   font-weight: 600;
   backdrop-filter: blur(6px);
 }
 
 .stat-pill.hp {
-  background: rgba(255,93,108,.85);
+  background: rgba(255,93,108,.9);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(255,93,108,.4);
+  box-shadow: 0 1px 4px rgba(255,93,108,.4);
 }
 
 .stat-pill.atk {
-  background: rgba(79,124,255,.85);
+  background: rgba(79,124,255,.9);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(79,124,255,.4);
+  box-shadow: 0 1px 4px rgba(79,124,255,.4);
 }
 
-/* Ability overlay on result cards */
+/* Ability overlay on result cards - fixed positioning */
 .result-card .ability-overlay {
   position: absolute;
-  bottom: 36px;
-  left: 0;
-  right: 0;
+  top: 6px;
+  left: 6px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 5px 8px;
-  background: linear-gradient(90deg, transparent, rgba(0,0,0,.85), transparent);
-  border-top: 1px solid;
-  border-bottom: 1px solid;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.8);
+  border: 1px solid;
+  backdrop-filter: blur(6px);
+  z-index: 3;
+  max-width: 50%;
 }
 
 .ability-overlay .ability-icon {
-  font-size: 12px;
+  font-size: 10px;
+  flex-shrink: 0;
 }
 
 .ability-overlay .ability-text {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Inventory card specific styling */
@@ -2127,126 +2136,34 @@ html, body {
   z-index: 5;
 }
 
-/* Modal stats display */
-.modal-stats {
-  margin-top: 12px;
-  padding: 12px;
-  background: rgba(0,0,0,.3);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-
-.modal-stats.hidden {
-  display: none;
-}
-
-.modal-stats-row {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.modal-stat {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.1);
-}
-
-.modal-stat .stat-icon {
-  font-size: 18px;
-}
-
-.modal-stat .stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.modal-stat .stat-label {
+/* Inventory count badge - moved to bottom left */
+.inventory .result-card .count-badge {
+  position: absolute;
+  bottom: 44px;
+  left: 6px;
+  top: auto;
+  right: auto;
+  padding: 3px 8px;
   font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.modal-stat.hp {
-  border-color: rgba(255,93,108,.4);
-  background: rgba(255,93,108,.1);
-}
-
-.modal-stat.atk {
-  border-color: rgba(79,124,255,.4);
-  background: rgba(79,124,255,.1);
-}
-
-/* Modal ability display */
-.modal-ability {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: rgba(0,0,0,.3);
-  border: 1px solid;
-}
-
-.modal-ability .ability-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.modal-ability .ability-icon {
-  font-size: 16px;
-}
-
-.modal-ability .ability-name {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-}
-
-.modal-ability .ability-desc {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: .3px;
+  line-height: 1;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(95,124,255,.95), rgba(160,185,255,.8));
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.2), 0 2px 8px rgba(0,0,0,.5);
+  z-index: 4;
+  animation: none;
 }
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  .stat-pill {
-    padding: 2px 6px;
-    font-size: 10px;
+  .results .grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   }
   
-  .ability-overlay .ability-text {
-    font-size: 9px;
-  }
-  
-  .modal-stats-row {
-    gap: 10px;
-  }
-  
-  .modal-stat {
-    padding: 6px 12px;
-  }
-  
-  .modal-stat .stat-value {
-    font-size: 16px;
-  }
-  
-  .modal-stat .stat-icon {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 480px) {
-  .result-card .stats-overlay {
-    top: 4px;
-    right: 4px;
+  .result-card img {
+    height: 120px;
   }
   
   .stat-pill {
@@ -2255,8 +2172,42 @@ html, body {
     gap: 2px;
   }
   
+  .ability-overlay {
+    padding: 2px 6px;
+    max-width: 60%;
+  }
+  
+  .ability-overlay .ability-text {
+    font-size: 8px;
+   }
+  
+  .ability-overlay .ability-icon {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .results .grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+  
+  .result-card img {
+    height: 100px;
+  }
+  
+  .result-card .stats-overlay {
+    top: 4px;
+    right: 4px;
+  }
+  
   .result-card .ability-overlay {
-    bottom: 32px;
-    padding: 3px 6px;
+    top: 4px;
+    left: 4px;
+    max-width: 55%;
+  }
+  
+  .stat-pill {
+    padding: 1px 4px;
+    font-size: 8px;
   }
 }
